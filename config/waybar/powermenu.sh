@@ -1,11 +1,14 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
 # Create a temporary CSS file for this specific menu
-TEMP_CSS=$(mktemp)
+TEMP_CSS=$(mktemp --suffix=.css)
+trap 'rm -f "$TEMP_CSS"' EXIT
 
 # Write inline CSS to match Waybar styling
 cat > "$TEMP_CSS" << 'EOF'
 window {
+    font-family: "Caskaydia Cove Nerd Font", monospace;
     background-color: #1e1e2e;
     border-radius: 8px;
     border: 2px solid #313244;
@@ -87,18 +90,19 @@ window {
 }
 EOF
 
-# Options with icons
-options=("  Shutdown" "  Reboot" "  Logout" "  Lock" "  Suspend")
+# Options with icons - using better nerd font icons
+options=("󰐥  Shutdown" "󰜉  Reboot" "󰍃  Logout" "󰌾  Lock" "󰤄  Suspend")
 
 # Use wofi with hidden search input
 choice=$(printf '%s\n' "${options[@]}" | wofi --dmenu --insensitive --width 250 \
   --location 1 --yoffset -45 --xoffset 10 \
   --style "$TEMP_CSS" --hide-search=true \
   --prompt="" --search="" \
-  --cache-file /dev/null)
+  --cache-file /dev/null \
+  --no-actions \
+  --lines 5)
 
-# Clean up temporary file
-rm "$TEMP_CSS"
+# Temporary file cleaned up by trap on EXIT
 
 # Execute based on choice
 case "$choice" in
@@ -109,13 +113,29 @@ case "$choice" in
         systemctl reboot
         ;;
     *Logout)
-        hyprctl dispatch exit
+        if command -v uwsm >/dev/null 2>&1; then
+            uwsm stop
+        else
+            hyprctl dispatch exit
+        fi
         ;;
     *Lock)
-        /sbin/hyprlock
+        if command -v hyprlock >/dev/null 2>&1; then
+            hyprlock
+        elif [ -x /sbin/hyprlock ]; then
+            /sbin/hyprlock
+        else
+            echo "Error: hyprlock not found" >&2
+            exit 1
+        fi
         ;;
     *Suspend)
-        /sbin/hyprlock & sleep 1 && systemctl suspend
+        if command -v hyprlock >/dev/null 2>&1; then
+            hyprlock &
+        elif [ -x /sbin/hyprlock ]; then
+            /sbin/hyprlock &
+        fi
+        sleep 1 && systemctl suspend
         ;;
     *)
         # No selection or cancelled
