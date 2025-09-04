@@ -1,0 +1,130 @@
+# Arch Linux Terminal & Bash Command Cheat Sheet
+
+──────────────────────────────
+📂 Files & Directories
+──────────────────────────────
+ls -l        # list files in long format
+ls -a        # list all files, including hidden
+pwd          # print current working directory
+cd ~/build   # change directory
+mkdir src    # make new directory
+rm file      # remove file
+rm -rf dir   # remove directory and contents
+cp a b       # copy file a → b
+mv a b       # move/rename file a → b
+tree         # display directory structure
+
+──────────────────────────────
+📦 Package Management (pacman)
+──────────────────────────────
+sudo pacman -Syu         # update system
+sudo pacman -S pkg       # install package
+sudo pacman -R pkg       # remove package
+pacman -Qi pkg           # show info about installed package
+pacman -Ql pkg           # list files installed by package
+pacman -Ss keyword       # search repo for package
+pacman -Qs keyword       # search installed packages
+
+──────────────────────────────
+⚙️ Building from Source
+──────────────────────────────
+make          # build project
+make clean    # clean build artifacts
+make -j12     # build with 12 jobs
+./configure   # prepare build system
+cmake ..      # generate build files with CMake
+ninja         # build with Ninja
+ninja install # install with Ninja
+
+──────────────────────────────
+📦 Arch Packaging (makepkg)
+──────────────────────────────
+makepkg -s    # build package with deps
+makepkg -si   # build + install
+makepkg -o    # only extract sources
+makepkg -e    # skip prepare()
+updpkgsums    # update checksums in PKGBUILD
+
+──────────────────────────────
+🔧 Git Basics
+──────────────────────────────
+git init                   # initialize repo
+git clone URL              # clone repo
+git status                 # show status
+git add file               # stage file
+git commit -m message    # commit staged changes
+git push origin main       # push to remote
+git pull origin main       # pull from remote
+git log --oneline --graph  # view commit history
+
+──────────────────────────────
+🖥️ System Info
+──────────────────────────────
+uname -r       # kernel version
+lsmod          # list loaded modules
+lscpu          # CPU info
+lsblk          # block devices
+free -h        # memory usage
+df -h          # disk usage
+dmesg -l err   # kernel errors
+journalctl -xe # system logs
+
+──────────────────────────────
+📜 Text Processing (essentials)
+──────────────────────────────
+grep pattern file      # search file(s) for matching text
+grep -RIn 'CONFIG_BT' kernel/
+# recursively search for CONFIG_BT in kernel/, show line numbers
+
+tee file               # read from stdin, write to screen and file
+make 2>&1 | tee build.log
+# run make, see output live, and save it to build.log
+
+──────────────────────────────
+🔣 Shell Operators
+──────────────────────────────
+> file       # redirect stdout (overwrite file)
+echo test > out.txt   # creates/overwrites out.txt with test
+
+>> file      # redirect stdout (append to file)
+echo next >> out.txt  # appends next to out.txt
+
+2> file      # redirect stderr (errors only)
+make 2> errors.log
+
+&> file      # redirect both stdout + stderr
+command &> all.log
+
+|           # pipe: send stdout of one command into another
+dmesg | grep iwlwifi   # show only kernel logs with iwlwifi
+
+||          # OR: run right-hand command if left fails
+make || echo Build failed!
+
+&&          # AND: run right-hand command if left succeeds
+make && sudo make install
+
+;           # sequential execution, ignore success/failure
+echo one ; echo two
+
+cd          # rerun last command
+cd          
+
+sudo cd     # rerun last command with sudo
+
+makepkg -si       # reruns last make command
+
+
+~           # home directory expansion
+cd ~/build  # → /home/username/build
+
+0          # exit code of last command (0 = success)
+echo 0
+
+          # PID of last background job
+sleep 100 & echo 
+
+jobs        # list background jobs
+fg %1       # bring job #1 to foreground
+bg %1       # resume job #1 in background
+

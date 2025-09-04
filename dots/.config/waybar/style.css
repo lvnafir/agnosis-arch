@@ -1,0 +1,191 @@
+/* Enhanced Waybar theme with improved aesthetics and transitions */
+
+#waybar {
+  background: transparent;
+  border-radius: 12px;
+  padding: 4px 8px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+  font-family: "Caskaydia Cove Nerd Font", monospace;
+  transition: all 0.3s ease;
+  margin: 5px;
+}
+
+/* General module styling with transitions */
+#waybar .module {
+  background: #313244;
+  border-radius: 8px;
+  padding: 4px 10px;
+  margin: 3px;
+  color: #cdd6f4;
+  transition: all 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  font-weight: 500;
+}
+
+/* Default hover style removed, individual ones below */
+#waybar .module:hover {
+  margin-top: 8px;
+  margin-bottom: 1px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* --- WORKSPACES --- */
+#waybar #workspaces {
+  background: #313244;
+  border-radius: 8px;
+  margin: 3px;
+  padding: 2px 4px;
+}
+
+#waybar #workspaces button {
+  background: #313244;
+  color: #cdd6f4;
+  border-radius: 6px;
+  margin: 0 2px;
+  padding: 4px 8px;
+  transition: all 0.2s ease;
+  min-width: 30px;
+}
+
+#waybar #workspaces button:hover {
+  background: #cba6f7;
+  color: #1e1e2e;
+  padding: 5px 9px;
+}
+
+#waybar #workspaces button.active {
+  background: #cba6f7;
+  color: #1e1e2e;
+  font-weight: bold;
+  box-shadow: 0 0 5px rgba(203, 166, 247, 0.7);
+}
+
+/* Urgent workspace */
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.8; }
+  100% { opacity: 1; }
+}
+
+#waybar #workspaces button.urgent {
+  background: #f38ba8;
+  color: #1e1e2e;
+  animation: pulse 1.5s infinite;
+}
+
+/* Module-specific hover colors */
+#battery:hover {
+  background: #a6e3a1;
+  color: #1e1e2e;
+}
+
+#battery.warning:hover {
+  background: #f9e2af;
+  color: #1e1e2e;
+}
+
+#battery.critical:hover {
+  background: #f38ba8;
+  color: #1e1e2e;
+  animation: pulse 1s infinite;
+}
+
+#clock:hover {
+  background: #89b4fa;
+  color: #1e1e2e;
+}
+
+#custom-power:hover {
+  background: #f38ba8;
+  color: #1e1e2e;
+}
+
+#memory:hover {
+  background: #fab387;
+  color: #1e1e2e;
+}
+
+#cpu:hover {
+  background: #f38ba8;
+  color: #1e1e2e;
+}
+
+#temperature:hover {
+  background: #f9e2af;
+  color: #1e1e2e;
+}
+
+#network:hover {
+  background: #cba6f7;
+  color: #1e1e2e;
+}
+
+#pulseaudio:hover {
+  background: #89dceb;
+  color: #1e1e2e;
+}
+
+#backlight:hover {
+  background: #f5e0dc;
+  color: #1e1e2e;
+}
+
+/* System modules base styling */
+#battery {
+  color: #cdd6f4;
+}
+
+#clock {
+  font-weight: bold;
+  color: #cdd6f4;
+}
+
+#custom-power {
+  color: #cdd6f4;
+  font-size: 16px;
+  padding: 0 12px;
+}
+
+#memory, #cpu, #temperature {
+  color: #cdd6f4;
+}
+
+#network {
+  color: #cdd6f4;
+}
+
+#temperature.critical {
+  background: #f38ba8;
+  color: #1e1e2e;
+}
+
+#tray {
+  background: #313244;
+  padding: 0 10px;
+}
+
+#tray menu {
+  background: #1e1e2e;
+  border: 1px solid #313244;
+  border-radius: 8px;
+}
+
+#custom-terminal, #custom-browser {
+    font-size: 18px;
+    padding: 0 10px;
+}
+
+#custom-terminal:hover {
+    margin-top: 5px;
+    margin-bottom: 1px;
+    background: #a6e3a1;  /* Green */
+    color: #1e1e2e;
+}
+
+#custom-browser:hover {
+    margin-top: 5px;
+    margin-bottom: 1px;
+    background: #89b4fa;  /* Blue */
+    color: #1e1e2e;
+}
+
+
