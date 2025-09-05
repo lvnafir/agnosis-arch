@@ -5,6 +5,8 @@
     	"custom/power",
 	"custom/terminal",
 	"custom/browser",
+	"custom/appmenu",
+	"custom/claude",
 
         "hyprland/workspaces"
     ],
@@ -14,7 +16,7 @@
     "modules-right": [
         "backlight",
         "pulseaudio",
-	"custom/easyeffects",
+	"custom/btop",
         "network",
         "battery",
         "clock"
@@ -38,6 +40,17 @@
     "custom/browser": {
         "format": "",  // Browser icon
         "on-click": "firefox",
+        "tooltip": false
+    },
+    "custom/appmenu": {
+        "format": "󰍉",  // Magnifying glass icon
+        "tooltip": true,
+        "tooltip-format": "App Menu",
+        "on-click": "fuzzel"
+    },
+    "custom/claude": {
+        "format": "󰧑",  // AI/Brain icon
+        "on-click": "kitty -e claude",
         "tooltip": false
     },
     "tray": {
@@ -77,12 +90,13 @@
         "format-icons": ["󰂎", "󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"]
     },
     "network": {
-        "format-wifi": "({signalStrength}%) 󰖩",
+        "format-wifi": "{essid} 󰖩",
         "format-ethernet": "{ipaddr}/{cidr} 󰈀",
-        "tooltip-format": "{ifname} via {gwaddr} ",
+        "tooltip-format": "Signal: {signalStrength}% ({signaldBm} dBm)",
         "format-linked": "{ifname} (No IP) 󰈀",
         "format-disconnected": "Disconnected 󰖪",
-        "format-alt": "{ifname}: {ipaddr}/{cidr}"
+        "format-alt": "{essid} 󰖩",
+        "on-click": "~/.config/waybar/wifimenu-complete-refactored.sh"
     },
     "pulseaudio": {
         "format": "{volume}% {icon} {format_source}",
@@ -102,14 +116,15 @@
         },
         "on-click": "pavucontrol"
     },
-	"custom/easyeffects": {
-	  "format": "󰺢",
-	  "tooltip": false,
-	  "on-click": "easyeffects"
+	"custom/btop": {
+	  "format": "󰓅",
+	  "tooltip": true,
+	  "tooltip-format": "btop: resource monitor",
+	  "on-click": "kitty -e btop"
     },
     "custom/power": {
         "format": "󰐥",
         "tooltip": false,
-        "on-click": "~/.config/waybar/powermenu.sh"
-    }
+        "on-click": "~/.config/waybar/powermenu-fuzzel.sh"
+    },
 }

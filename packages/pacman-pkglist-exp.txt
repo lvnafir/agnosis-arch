@@ -16,7 +16,6 @@ cpio
 cpupower
 dkms
 dmidecode
-easyeffects
 efibootmgr
 ethtool
 fastfetch
@@ -32,6 +31,8 @@ hyfetch
 hyprland
 hyprlock
 hyprpaper
+hyprpicker
+hyprshot
 imagemagick
 intel-ucode
 inxi
@@ -50,12 +51,16 @@ lld
 lshw
 ly
 mako
+man-db
 modprobed-db
 nano
+nautilus
 neovim
+nodejs
 noto-fonts
 noto-fonts-cjk
 noto-fonts-emoji
+npm
 nvidia-dkms
 nvidia-prime
 nvidia-settings
@@ -89,10 +94,7 @@ texlive-latexextra
 thinkfan
 thorium-browser-bin
 throttled
-ttf-cascadia-code
 ttf-cascadia-code-nerd
-ttf-jetbrains-mono
-ttf-jetbrains-mono-nerd
 tumbler
 turbostat
 uwsm
@@ -103,9 +105,6 @@ waybar
 wget
 wireless_tools
 wireplumber
-wofi
 xdg-desktop-portal-hyprland
 xdg-utils
-xorg-server
-xorg-xinit
 zram-generator
