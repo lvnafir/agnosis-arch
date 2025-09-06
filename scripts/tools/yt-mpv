@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# Simple YouTube to mpv player
+# Usage: yt-mpv [URL]
+
+if [ $# -eq 0 ]; then
+    echo "Usage: yt-mpv [YouTube URL]"
+    echo "Example: yt-mpv https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+    exit 1
+fi
+
+# Check if mpv is installed
+if ! command -v mpv &> /dev/null; then
+    echo "Error: mpv is not installed"
+    echo "Install it with: sudo pacman -S mpv"
+    exit 1
+fi
+
+# Check if yt-dlp is installed
+if ! command -v yt-dlp &> /dev/null; then
+    echo "Error: yt-dlp is not installed"
+    echo "Install it with: sudo pacman -S yt-dlp"
+    exit 1
+fi
+
+# Play the video with mpv
+echo "Playing: $1"
+mpv --ytdl-format="bestvideo[height<=?1080]+bestaudio/best" "$1"

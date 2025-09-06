@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# Claude Code installer script
+# Installs Claude Code CLI via npm
+
+set -e
+
+echo "Installing Claude Code CLI..."
+
+# Check if npm is installed
+if ! command -v npm &> /dev/null; then
+    echo "Error: npm is not installed"
+    echo "Install Node.js and npm first with: sudo pacman -S nodejs npm"
+    exit 1
+fi
+
+# Install Claude Code globally
+echo "Running npm install..."
+sudo npm install -g @anthropic/claude-code
+
+# Verify installation
+if command -v claude &> /dev/null; then
+    echo "✓ Claude Code installed successfully!"
+    echo "Version: $(claude --version)"
+    echo ""
+    echo "You can now use 'claude' command in your terminal"
+else
+    echo "Installation may have completed but claude command not found"
+    echo "Try reloading your shell or check npm global bin path"
+fi

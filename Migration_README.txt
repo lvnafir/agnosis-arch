@@ -55,6 +55,15 @@ config/fuzzel/fuzzel.ini
            Defines colors, fonts, borders, and keybindings for all fuzzel menus.
 
 ================================================================================
+MAKO CONFIGURATION
+================================================================================
+
+config/mako/config
+  → ~/.config/mako/config
+  Purpose: Notification daemon configuration with Catppuccin Mocha theme.
+           Defines notification appearance, positioning, timeouts, and urgency levels.
+
+================================================================================
 PACKAGE LISTS
 ================================================================================
 
