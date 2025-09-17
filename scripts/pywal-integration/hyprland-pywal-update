@@ -1,0 +1,41 @@
+#!/bin/bash
+# Update Hyprland colors from pywal
+
+# Source the colors
+if [ -f ~/.cache/wal/colors.sh ]; then
+    export FZF_DEFAULT_OPTS=""
+    export LS_COLORS=""
+    . ~/.cache/wal/colors.sh
+    
+    # Update Hyprland color config
+    cat > ~/.config/hypr/colors.conf << EOC
+# Hyprland colors from pywal
+# Auto-generated - do not edit directly
+
+\$background = rgb(${background:1})
+\$foreground = rgb(${foreground:1})
+\$cursor = rgb(${cursor:1})
+
+\$color0 = rgb(${color0:1})
+\$color1 = rgb(${color1:1})
+\$color2 = rgb(${color2:1})
+\$color3 = rgb(${color3:1})
+\$color4 = rgb(${color4:1})
+\$color5 = rgb(${color5:1})
+\$color6 = rgb(${color6:1})
+\$color7 = rgb(${color7:1})
+\$color8 = rgb(${color8:1})
+\$color9 = rgb(${color9:1})
+\$color10 = rgb(${color10:1})
+\$color11 = rgb(${color11:1})
+\$color12 = rgb(${color12:1})
+\$color13 = rgb(${color13:1})
+\$color14 = rgb(${color14:1})
+\$color15 = rgb(${color15:1})
+EOC
+    
+    # Reload Hyprland configuration
+    hyprctl reload >/dev/null 2>&1
+    
+    echo "Hyprland colors updated!"
+fi

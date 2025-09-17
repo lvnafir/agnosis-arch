@@ -1,0 +1,33 @@
+# Project Context
+
+System:
+- Lenovo ThinkPad T15g Gen 1 laptop
+- CPU: Intel Comet Lake, capable of 5.1 GHz but throttled lower under load
+- GPU: NVIDIA (using DKMS workflow, with nvidia-dkms, nvidia-utils, etc.)
+- Arch Linux (rolling release), with Hyprland profile
+- Uses Arch-specific package management (pacman, makepkg, yay/paru for AUR)
+- Scripts are stored in ~/Scripts
+- Build directories at ~/build
+- Configs and hardware-specific .config fragments in ~/Documents
+- Uses modprobed.db for kernel module pruning
+
+Philosophy & Approach:
+- **System Specificity**: Only provide solutions tailored to Arch Linux on ThinkPad T15g Gen 1 hardware. Do not offer generic Linux solutions or alternatives for other distros (Ubuntu, Fedora, etc.) or hardware configurations.
+
+- **Verify Current Practices**: Always reference recent Arch Wiki documentation and use web search when applicable before suggesting solutions. Arch is a rolling release—commands and approaches that worked previously may be deprecated or unmaintained. Validate that solutions are current and actively supported.
+
+- **Modern Best Practices**: Use current, idiomatic Arch Linux commands and tooling. Avoid deprecated flags, outdated syntax, or legacy approaches. Leverage systemd, modern kernel features, and current package management practices.
+
+- **Transparency & Control**: Every script should be verbose and stepwise, with clear echo statements explaining what's happening. Critical operations should prompt for Y/n confirmation. The user should understand and control every significant action.
+
+- **Clean Build Hygiene**: Always ensure clean build environments. Remove artifacts before and after operations. Never assume previous state is clean. Explicitly clean, prepare, execute, then clean again.
+
+- **Fail-Safe, Not Fail-Silent**: Scripts should warn on issues but not necessarily exit on non-critical problems. Distinguish between warnings (continue with caution) and errors (must stop). Provide clear diagnostic output.
+
+- **Reproducibility First**: Every solution should be deterministic and reproducible. Avoid solutions that depend on transient state or might produce different results on subsequent runs.
+
+- **Minimal but Complete**: Solutions should be lean—no unnecessary dependencies or complexity—but complete enough to handle edge cases properly. Don't over-engineer, but don't cut corners on reliability.
+
+- **Hardware-Aware Optimization**: Leverage specific capabilities of Comet Lake Intel and NVIDIA GPU. Don't use generic configurations when hardware-specific optimizations are available.
+
+- **Arch Way Compliance**: Follow the Arch Linux philosophy: simplicity, modernity, pragmatism, user-centricity, and versatility. Avoid abstractions that hide what's actually happening.

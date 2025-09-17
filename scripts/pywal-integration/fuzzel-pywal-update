@@ -1,0 +1,58 @@
+#!/bin/bash
+# Update ONLY Fuzzel colors from pywal - preserves other settings
+
+CONFIG_FILE="$HOME/.config/fuzzel/fuzzel.ini"
+
+# Source the colors
+if [ -f ~/.cache/wal/colors.sh ]; then
+    export FZF_DEFAULT_OPTS=""
+    export LS_COLORS=""
+    . ~/.cache/wal/colors.sh
+    
+    # Check if config exists
+    if [ ! -f "$CONFIG_FILE" ]; then
+        echo "Fuzzel config doesn't exist, creating minimal color config..."
+        cat > "$CONFIG_FILE" << EOC
+# Fuzzel colors from pywal
+[colors]
+background=${background:1}dd
+text=${foreground:1}ff
+selection=${color4:1}ff
+selection-text=${foreground:1}ff
+border=${color5:1}ff
+match=${color1:1}ff
+EOC
+    else
+        # Update only the colors section
+        # Create temp file with updated colors
+        TEMP_FILE="/tmp/fuzzel-colors-$$"
+        
+        # Read existing config and update colors
+        awk -v bg="${background:1}dd" \
+            -v fg="${foreground:1}ff" \
+            -v sel="${color4:1}ff" \
+            -v seltxt="${foreground:1}ff" \
+            -v brd="${color5:1}ff" \
+            -v mtch="${color1:1}ff" '
+        BEGIN { in_colors = 0 }
+        /^\[colors\]/ { 
+            in_colors = 1
+            print
+            print "background=" bg
+            print "text=" fg
+            print "selection=" sel
+            print "selection-text=" seltxt
+            print "border=" brd
+            print "match=" mtch
+            next
+        }
+        /^\[/ && in_colors { in_colors = 0 }
+        !in_colors || /^\[/ { print }
+        ' "$CONFIG_FILE" > "$TEMP_FILE"
+        
+        # Replace original with updated
+        mv "$TEMP_FILE" "$CONFIG_FILE"
+    fi
+    
+    echo "Fuzzel colors updated!"
+fi

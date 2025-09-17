@@ -1,0 +1,101 @@
+#!/bin/bash
+# Update ONLY mako colors from pywal - preserves other settings
+
+CONFIG_FILE="$HOME/.config/mako/config"
+
+# Source the colors
+if [ -f ~/.cache/wal/colors.sh ]; then
+    export FZF_DEFAULT_OPTS=""
+    export LS_COLORS=""
+    . ~/.cache/wal/colors.sh
+    
+    # Check if config exists
+    if [ ! -f "$CONFIG_FILE" ]; then
+        echo "Mako config doesn't exist, creating minimal color config..."
+        cat > "$CONFIG_FILE" << EOC
+# Mako colors from pywal
+background-color=$background
+text-color=$foreground
+border-color=$color5
+progress-color=over $color13
+
+[urgency=low]
+border-color=$color8
+
+[urgency=normal]
+border-color=$color5
+
+[urgency=high]
+border-color=$color1
+background-color=$color0
+text-color=$color15
+EOC
+    else
+        # Update only color-related lines in existing config
+        TEMP_FILE="/tmp/mako-colors-$$"
+        
+        # Process the config file
+        awk -v bg="$background" \
+            -v fg="$foreground" \
+            -v bc="$color5" \
+            -v pc="over $color13" \
+            -v low="$color8" \
+            -v high="$color1" \
+            -v highbg="$color0" \
+            -v highfg="$color15" '
+        BEGIN { section = "main" }
+        /^\[urgency=low\]/ { section = "low"; print; next }
+        /^\[urgency=normal\]/ { section = "normal"; print; next }
+        /^\[urgency=high\]/ { section = "high"; print; next }
+        /^\[/ { section = "other"; print; next }
+        
+        # Update color lines based on section
+        /^background-color=/ {
+            if (section == "main") print "background-color=" bg
+            else if (section == "high") print "background-color=" highbg
+            else print
+            next
+        }
+        /^text-color=/ {
+            if (section == "main") print "text-color=" fg
+            else if (section == "high") print "text-color=" highfg
+            else print
+            next
+        }
+        /^border-color=/ {
+            if (section == "main") print "border-color=" bc
+            else if (section == "low") print "border-color=" low
+            else if (section == "normal") print "border-color=" bc
+            else if (section == "high") print "border-color=" high
+            else print
+            next
+        }
+        /^progress-color=/ {
+            if (section == "main") print "progress-color=" pc
+            else print
+            next
+        }
+        
+        # Keep all other lines unchanged
+        { print }
+        ' "$CONFIG_FILE" > "$TEMP_FILE"
+        
+        # Replace original with updated
+        mv "$TEMP_FILE" "$CONFIG_FILE"
+    fi
+    
+    # Reload mako
+    if pgrep -x mako >/dev/null; then
+        # Mako reloads config automatically on SIGUSR2
+        pkill -USR2 mako
+    else
+        # Start mako if not running
+        mako &
+        disown
+    fi
+    
+    echo "Mako colors updated!"
+else
+    echo "Error: Pywal colors not found"
+    exit 1
+fi

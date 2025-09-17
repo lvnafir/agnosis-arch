@@ -1,0 +1,204 @@
+@import "../../.cache/wal/colors-waybar.css";
+/* Enhanced Waybar theme with improved aesthetics and transitions */
+
+#waybar {
+  background: transparent;
+  border-radius: 12px;
+  padding: 4px 8px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+  font-family: "Caskaydia Cove Nerd Font", monospace;
+  transition: all 0.3s ease;
+  margin: 5px;
+}
+
+/* General module styling with transitions */
+#waybar .module {
+  background: @color0;
+  border-radius: 8px;
+  padding: 4px 10px;
+  margin: 3px;
+  color: @color15;
+  transition: all 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  font-weight: 500;
+}
+
+/* Default hover style removed, individual ones below */
+#waybar .module:hover {
+  margin-top: 8px;
+  margin-bottom: 1px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* --- WORKSPACES --- */
+#waybar #workspaces {
+  background: @color0;
+  border-radius: 8px;
+  margin: 3px;
+  padding: 2px 4px;
+}
+
+#waybar #workspaces button {
+  background: @color0;
+  color: @color15;
+  border-radius: 6px;
+  margin: 0 2px;
+  padding: 4px 8px;
+  transition: all 0.2s ease;
+  min-width: 30px;
+}
+
+#waybar #workspaces button:hover {
+  background: @color5;
+  color: @color15;
+  padding: 5px 9px;
+}
+
+#waybar #workspaces button.active {
+  background: @color5;
+  color: @color15;
+  font-weight: bold;
+  box-shadow: 0 0 5px rgba(203, 166, 247, 0.7);
+}
+
+/* Urgent workspace */
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.8; }
+  100% { opacity: 1; }
+}
+
+#waybar #workspaces button.urgent {
+  background: @color1;
+  color: @color15;
+  animation: pulse 1.5s infinite;
+}
+
+/* Module-specific hover colors */
+#battery:hover {
+  background: @color2;
+  color: @color15;
+}
+
+#battery.warning:hover {
+  background: @color3;
+  color: @color15;
+}
+
+#battery.critical:hover {
+  background: @color1;
+  color: @color15;
+  animation: pulse 1s infinite;
+}
+
+#clock:hover {
+  background: @color4;
+  color: @color15;
+}
+
+#custom-power:hover {
+  background: @color1;
+  color: @color15;
+}
+
+#memory:hover {
+  background: @color11;
+  color: @color15;
+}
+
+#cpu:hover {
+  background: @color1;
+  color: @color15;
+}
+
+#temperature:hover {
+  background: @color3;
+  color: @color15;
+}
+
+#network:hover {
+  background: @color5;
+  color: @color15;
+}
+
+#pulseaudio:hover {
+  background: @color6;
+  color: @color15;
+}
+
+#backlight:hover {
+  background: @color7;
+  color: @background;
+}
+
+/* System modules base styling */
+#battery {
+  color: @color15;
+}
+
+#clock {
+  font-weight: bold;
+  color: @color15;
+}
+
+#custom-power {
+  color: @color15;
+  font-size: 16px;
+  padding: 0 12px;
+}
+
+#memory, #cpu, #temperature {
+  color: @color15;
+}
+
+#network {
+  color: @color15;
+}
+
+#temperature.critical {
+  background: @color1;
+  color: @color15;
+}
+
+#tray {
+  background: @color0;
+  padding: 0 10px;
+}
+
+#tray menu {
+  background: @background;
+  border: 1px solid @color0;
+  border-radius: 8px;
+}
+
+#custom-terminal, #custom-browser {
+    font-size: 18px;
+    padding: 0 10px;
+}
+
+#custom-terminal:hover {
+    margin-top: 5px;
+    margin-bottom: 1px;
+    background: @color2;  /* Green */
+    color: @color15;
+}
+
+#custom-browser:hover {
+    margin-top: 5px;
+    margin-bottom: 1px;
+    background: @color4;  /* Blue */
+    color: @color15;
+}
+
+/* Tooltip styling */
+tooltip {
+    background: @background;
+    color: @color15;
+    border: 1px solid @color5;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-family: "Caskaydia Cove Nerd Font", monospace;
+    font-size: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+

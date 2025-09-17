@@ -74,21 +74,67 @@ chmod_all_scripts() {
         chmod +x "$CONFIG_DIR/waybar/wifimenu-complete-refactored.sh"
         print_success "Made executable: waybar/wifimenu-complete-refactored.sh"
     fi
+
+    if [[ -f "$CONFIG_DIR/waybar/appmenu-fuzzel.sh" ]]; then
+        chmod +x "$CONFIG_DIR/waybar/appmenu-fuzzel.sh"
+        print_success "Made executable: waybar/appmenu-fuzzel.sh"
+    fi
+
+    if [[ -f "$CONFIG_DIR/hypr/touchpad-config-toggle.sh" ]]; then
+        chmod +x "$CONFIG_DIR/hypr/touchpad-config-toggle.sh"
+        print_success "Made executable: hypr/touchpad-config-toggle.sh"
+    fi
 }
 
 install_packages() {
-    print_header "Installing packages from pacman-pkglist-exp.txt"
-    
-    PKGLIST="$REPO_DIR/packages/pacman-pkglist-exp.txt"
-    
+    print_header "Installing official repository packages"
+
+    PKGLIST="$REPO_DIR/packages/pacman-pkglist.txt"
+
     if [[ ! -f "$PKGLIST" ]]; then
         print_error "Package list not found: $PKGLIST"
         return 1
     fi
-    
-    print_info "Reading package list..."
+
+    print_info "Installing $(wc -l < "$PKGLIST") official packages..."
     sudo pacman -S --needed --noconfirm - < "$PKGLIST"
-    print_success "Package installation completed"
+    print_success "Official package installation completed"
+}
+
+install_aur_packages() {
+    print_header "Installing AUR packages"
+
+    AUR_PKGLIST="$REPO_DIR/packages/aur-pkglist.txt"
+
+    if [[ ! -f "$AUR_PKGLIST" ]]; then
+        print_error "AUR package list not found: $AUR_PKGLIST"
+        return 1
+    fi
+
+    # Check if paru is available
+    if ! command -v paru &> /dev/null; then
+        print_error "paru not found. Installing paru first..."
+
+        # Install base-devel if not present
+        sudo pacman -S --needed --noconfirm base-devel git
+
+        # Clone and build paru
+        cd /tmp
+        git clone https://aur.archlinux.org/paru.git
+        cd paru
+        makepkg -si --noconfirm
+        cd "$REPO_DIR"
+        print_success "Installed paru AUR helper"
+    fi
+
+    print_info "Installing $(wc -l < "$AUR_PKGLIST") AUR packages..."
+    while read -r package; do
+        if [[ -n "$package" && ! "$package" =~ ^[[:space:]]*# ]]; then
+            print_info "Installing AUR package: $package"
+            paru -S --needed --noconfirm "$package" || print_error "Failed to install: $package"
+        fi
+    done < "$AUR_PKGLIST"
+    print_success "AUR package installation completed"
 }
 
 create_directories() {
@@ -121,10 +167,15 @@ migrate_config_files() {
         ["$REPO_DIR/config/hypr/hyprland.conf"]="$CONFIG_DIR/hypr/hyprland.conf"
         ["$REPO_DIR/config/hypr/hyprlock.conf"]="$CONFIG_DIR/hypr/hyprlock.conf"
         ["$REPO_DIR/config/hypr/hyprpaper.conf"]="$CONFIG_DIR/hypr/hyprpaper.conf"
+        ["$REPO_DIR/config/hypr/colors.conf"]="$CONFIG_DIR/hypr/colors.conf"
+        ["$REPO_DIR/config/hypr/pywal-decorations.conf"]="$CONFIG_DIR/hypr/pywal-decorations.conf"
+        ["$REPO_DIR/config/hypr/touchpad-config-toggle.sh"]="$CONFIG_DIR/hypr/touchpad-config-toggle.sh"
         ["$REPO_DIR/config/waybar/config"]="$CONFIG_DIR/waybar/config"
         ["$REPO_DIR/config/waybar/style.css"]="$CONFIG_DIR/waybar/style.css"
         ["$REPO_DIR/config/waybar/powermenu-fuzzel.sh"]="$CONFIG_DIR/waybar/powermenu-fuzzel.sh"
         ["$REPO_DIR/config/waybar/wifimenu-complete-refactored.sh"]="$CONFIG_DIR/waybar/wifimenu-complete-refactored.sh"
+        ["$REPO_DIR/config/waybar/appmenu-fuzzel.sh"]="$CONFIG_DIR/waybar/appmenu-fuzzel.sh"
+        ["$REPO_DIR/config/waybar/setup_cava.py"]="$CONFIG_DIR/waybar/setup_cava.py"
         ["$REPO_DIR/config/fuzzel/fuzzel.ini"]="$CONFIG_DIR/fuzzel/fuzzel.ini"
         ["$REPO_DIR/config/mako/config"]="$CONFIG_DIR/mako/config"
     )
@@ -152,6 +203,42 @@ migrate_config_files() {
                 print_success "Copied wallpaper: $(basename "$wallpaper")"
             fi
         done
+    fi
+}
+
+install_pywal_scripts() {
+    print_header "Installing pywal integration scripts"
+
+    if [[ ! -d "$HOME/.local/bin" ]]; then
+        mkdir -p "$HOME/.local/bin"
+        print_success "Created ~/.local/bin directory"
+    fi
+
+    if [[ -d "$REPO_DIR/scripts/pywal-integration" ]]; then
+        print_info "Copying pywal integration scripts..."
+        for script in "$REPO_DIR/scripts/pywal-integration"/*; do
+            if [[ -f "$script" ]]; then
+                script_name=$(basename "$script")
+                if [[ -f "$HOME/.local/bin/$script_name" ]]; then
+                    print_info "Backing up existing: ~/.local/bin/$script_name"
+                    cp "$HOME/.local/bin/$script_name" "$HOME/.local/bin/$script_name.bak.$(date +%Y%m%d_%H%M%S)"
+                fi
+                cp "$script" "$HOME/.local/bin/"
+                chmod +x "$HOME/.local/bin/$script_name"
+                print_success "Installed: $script_name → ~/.local/bin/"
+            fi
+        done
+
+        # Ensure ~/.local/bin is in PATH
+        if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
+            print_info "Adding ~/.local/bin to PATH in ~/.bashrc"
+            echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
+            print_success "Added ~/.local/bin to PATH"
+        else
+            print_info "~/.local/bin already in PATH"
+        fi
+    else
+        print_info "No pywal integration scripts to install"
     fi
 }
 
@@ -353,12 +440,14 @@ main() {
     echo ""
     echo "This script will help you set up your Arch system with:"
     echo "  1. Make all scripts executable"
-    echo "  2. Install packages from pacman-pkglist-exp.txt"
-    echo "  3. Create necessary directories"
-    echo "  4. Migrate configuration files"
-    echo "  5. Copy system files (modprobe.d for NVIDIA/ACPI)"
-    echo "  6. Start and enable system services"
-    echo "  7. Reload configurations"
+    echo "  2. Install official repository packages"
+    echo "  3. Install AUR packages (with paru)"
+    echo "  4. Create necessary directories"
+    echo "  5. Migrate configuration files"
+    echo "  6. Install pywal integration scripts"
+    echo "  7. Copy system files (modprobe.d for NVIDIA/ACPI)"
+    echo "  8. Start and enable system services"
+    echo "  9. Reload configurations"
     echo ""
     echo "You will be prompted at each major step."
     echo ""
@@ -376,15 +465,31 @@ main() {
         print_info "Skipped making scripts executable"
     fi
     
-    # Step 2: Install packages
+    # Step 2: Install official packages
     echo ""
-    if ask_yes_no "Install packages from pacman-pkglist-exp.txt?"; then
+    if ask_yes_no "Install official repository packages?"; then
         install_packages
     else
-        print_info "Skipped package installation"
+        print_info "Skipped official package installation"
+    fi
+
+    # Step 3: Install AUR packages
+    echo ""
+    echo "AUR packages to install:"
+    if [[ -f "$REPO_DIR/packages/aur-pkglist.txt" ]]; then
+        head -5 "$REPO_DIR/packages/aur-pkglist.txt" | sed 's/^/  - /'
+        if [[ $(wc -l < "$REPO_DIR/packages/aur-pkglist.txt") -gt 5 ]]; then
+            echo "  ... and $(($(wc -l < "$REPO_DIR/packages/aur-pkglist.txt") - 5)) more"
+        fi
+    fi
+    echo ""
+    if ask_yes_no "Install AUR packages (requires paru)?"; then
+        install_aur_packages
+    else
+        print_info "Skipped AUR package installation"
     fi
     
-    # Step 3: Create directories
+    # Step 4: Create directories
     echo ""
     if ask_yes_no "Create necessary configuration directories?"; then
         create_directories
@@ -392,15 +497,29 @@ main() {
         print_info "Skipped directory creation"
     fi
     
-    # Step 4: Migrate config files
+    # Step 5: Migrate config files
     echo ""
     if ask_yes_no "Migrate configuration files (will backup existing files)?"; then
         migrate_config_files
     else
         print_info "Skipped config file migration"
     fi
+
+    # Step 6: Install pywal scripts
+    echo ""
+    echo "Pywal integration scripts:"
+    echo "  - fuzzel-pywal-update (dynamic fuzzel theming)"
+    echo "  - hyprland-pywal-update (dynamic hyprland theming)"
+    echo "  - mako-pywal-update (dynamic notification theming)"
+    echo "  - wallpaper (wallpaper management script)"
+    echo ""
+    if ask_yes_no "Install pywal integration scripts to ~/.local/bin/?"; then
+        install_pywal_scripts
+    else
+        print_info "Skipped pywal script installation"
+    fi
     
-    # Step 5: Copy system files
+    # Step 7: Copy system files
     echo ""
     echo "System files to copy:"
     echo "  - nvidia.conf (NVIDIA driver settings for Wayland)"
@@ -413,7 +532,7 @@ main() {
         print_info "Skipped system file configuration"
     fi
     
-    # Step 6: Start services
+    # Step 8: Start services
     echo ""
     echo "Services to enable/start:"
     echo "  - NetworkManager (network management)"
@@ -433,7 +552,7 @@ main() {
         print_info "Skipped service configuration"
     fi
     
-    # Step 6: Reload configurations
+    # Step 9: Reload configurations
     echo ""
     if ask_yes_no "Reload Hyprland configuration (if running)?"; then
         reload_configs

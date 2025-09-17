@@ -19,44 +19,44 @@ ignore-timeout=0
 font=sans-serif 11
 
 # Catppuccin Mocha colors
-background-color=#0c0c1b
-text-color=#c2c2c6
-border-color=#632843
-progress-color=#DC0450
+background-color=#313244
+text-color=#cdd6f4
+border-color=#cba6f7
+progress-color=over #cba6f7
 
 # Urgency levels
 [urgency=low]
-border-color=#632843
+border-color=#89b4fa
 default-timeout=4000
 
 [urgency=normal]
-border-color=#632843
+border-color=#cba6f7
 default-timeout=5000
 
 [urgency=high]
-border-color=#632843
-background-color=#0c0c1b
-text-color=#c2c2c6
+border-color=#f38ba8
+background-color=#313244
+text-color=#f38ba8
 default-timeout=0
 
 # Special app rules
 [app-name=Firefox]
-border-color=#632843
+border-color=#89b4fa
 
 [app-name=Spotify]
-border-color=#632843
+border-color=#a6e3a1
 default-timeout=3000
 
 [app-name=discord]
-border-color=#632843
+border-color=#cba6f7
 
 [app-name=Volume]
 default-timeout=2000
-border-color=#632843
+border-color=#89dceb
 
 [app-name=Brightness]
 default-timeout=2000
-border-color=#632843
+border-color=#f5e0dc
 
 # Grouped notifications
 [grouped]

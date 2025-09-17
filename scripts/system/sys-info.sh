@@ -5,7 +5,7 @@ STAMP="$(date +'%Y%m%d-%H%M%S')"
 OUT="${HOME}/Documents/sys-info-audit-${STAMP}.txt"
 
 hdr(){ echo -e "\n======================================================================\n$*\n----------------------------------------------------------------------" | tee -a "$OUT"; }
-run(){ echo "\n$ $*" | tee -a "$OUT"; ( "$@" 2>&1 || true ) | tee -a "$OUT"; }
+run(){ echo -e "\n$ $*" | tee -a "$OUT"; ( "$@" 2>&1 || true ) | tee -a "$OUT"; }
 maybe(){ command -v "$1" >/dev/null 2>&1 && run "$@" || echo "(skip: $1 not found)" | tee -a "$OUT"; }
 
 echo "Arch System Audit — $(date)" > "$OUT"
@@ -77,5 +77,5 @@ cat <<'EOF' | tee -a "$OUT"
 - Review kernel.unprivileged_userns_clone = 1 (disable if no Flatpak/Chrome required)
 EOF
 
-echo -e "\nAudit complete. Output saved to $OUT" | tee -a "$OUT"
+echo -e "\nAudit complete. Output saved to $OUT"
 

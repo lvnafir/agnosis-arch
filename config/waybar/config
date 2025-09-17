@@ -1,13 +1,13 @@
 {
+    "reload_style_on_change": true,
     "height": 46,
     "spacing": 4,
     "modules-left": [
-    	"custom/power",
-	"custom/terminal",
-	"custom/browser",
-	"custom/appmenu",
-	"custom/claude",
-
+        "custom/power",
+        "custom/terminal",
+        "custom/browser",
+        "custom/appmenu",
+        "custom/claude",
         "hyprland/workspaces"
     ],
     "modules-center": [
@@ -16,7 +16,8 @@
     "modules-right": [
         "backlight",
         "pulseaudio",
-	"custom/btop",
+        "cava",
+        "custom/btop",
         "network",
         "battery",
         "clock"
@@ -27,29 +28,29 @@
         "warp-on-scroll": false,
         "format": "{name}: {icon}",
         "format-icons": {
-            "urgent": "󰗖",
-            "active": "󰝥",
-            "default": "󰝦"
+            "urgent": "\udb81\uddd6",
+            "active": "\udb81\udf65",
+            "default": "\udb81\udf66"
         }
     },
-        "custom/terminal": {
-        "format": "󰆍",  // Terminal icon
+    "custom/terminal": {
+        "format": "\udb80\udd8d",
         "on-click": "kitty",
         "tooltip": false
     },
     "custom/browser": {
-        "format": "",  // Browser icon
-        "on-click": "firefox",
+        "format": "\ueb01",
+        "on-click": "chromium",
         "tooltip": false
     },
     "custom/appmenu": {
-        "format": "󰍉",  // Magnifying glass icon
+        "format": "\udb80\udf49",
         "tooltip": true,
         "tooltip-format": "App Menu",
         "on-click": "fuzzel"
     },
     "custom/claude": {
-        "format": "󰧑",  // AI/Brain icon
+        "format": "\udb82\uddd1",
         "on-click": "kitty -e claude",
         "tooltip": false
     },
@@ -59,23 +60,41 @@
     "clock": {
         "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>",
         "format-alt": "{:%Y-%m-%d}",
-        "format": "{:%H:%M} 󰥔"
+        "format": "{:%H:%M} \udb82\udd54"
     },
     "cpu": {
-        "format": "{usage}% 󰍛 ",
+        "format": "{usage}% \udb80\udf5b ",
         "tooltip": false
     },
     "memory": {
-        "format": "{}% 󰆼 "
+        "format": "{}% \udb80\uddbc "
     },
     "temperature": {
         "critical-threshold": 80,
-        "format": "{temperatureC}°C {icon}",
-        "format-icons": ["󱃃", "󰔏", "󱃂"]
+        "format": "{temperatureC}\u00b0C {icon}",
+        "format-icons": [
+            "\udb84\udcc3",
+            "\udb81\udd0f",
+            "\udb84\udcc2"
+        ]
     },
     "backlight": {
         "format": "{percent}% {icon}",
-	"format-icons": [ "", "", "", "", "", "", "", "", "", "", "", "", ""]
+        "format-icons": [
+            "\ue38d",
+            "\ue3d4",
+            "\ue3d3",
+            "\ue3d2",
+            "\ue3d0",
+            "\ue3cf",
+            "\ue3cd",
+            "\ue3cc",
+            "\ue3cb",
+            "\ue3ca",
+            "\ue3c9",
+            "\ue3c8",
+            "\ue39b"
+        ]
     },
     "battery": {
         "states": {
@@ -84,47 +103,85 @@
         },
         "format": "{capacity}% {icon}",
         "format-full": "{capacity}% {icon}",
-        "format-charging": "{capacity}% 󰂄",
-        "format-plugged": "{capacity}% 󰚥",
+        "format-charging": "{capacity}% \udb80\udc84",
+        "format-plugged": "{capacity}% \udb81\udea5",
         "format-alt": "{time} {icon}",
-        "format-icons": ["󰂎", "󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"]
+        "format-icons": [
+            "\udb80\udc8e",
+            "\udb80\udc7a",
+            "\udb80\udc7b",
+            "\udb80\udc7c",
+            "\udb80\udc7d",
+            "\udb80\udc7e",
+            "\udb80\udc7f",
+            "\udb80\udc80",
+            "\udb80\udc81",
+            "\udb80\udc82",
+            "\udb80\udc79"
+        ]
     },
     "network": {
-        "format-wifi": "{essid} 󰖩",
-        "format-ethernet": "{ipaddr}/{cidr} 󰈀",
+        "format-wifi": "{essid} \udb81\udda9",
+        "format-ethernet": "{ipaddr}/{cidr} \udb80\ude00",
         "tooltip-format": "Signal: {signalStrength}% ({signaldBm} dBm)",
-        "format-linked": "{ifname} (No IP) 󰈀",
-        "format-disconnected": "Disconnected 󰖪",
-        "format-alt": "{essid} 󰖩",
+        "format-linked": "{ifname} (No IP) \udb80\ude00",
+        "format-disconnected": "Disconnected \udb81\uddaa",
+        "format-alt": "{essid} \udb81\udda9",
         "on-click": "~/.config/waybar/wifimenu-complete-refactored.sh"
     },
     "pulseaudio": {
         "format": "{volume}% {icon} {format_source}",
         "format-bluetooth": "{volume}% {icon} {format_source}",
-        "format-bluetooth-muted": "󰝟 {icon} {format_source}",
-        "format-muted": "󰝟 {format_source}",
-        "format-source": "{volume}% 󰍬",
-        "format-source-muted": "󰍭",
+        "format-bluetooth-muted": "\udb81\udf5f {icon} {format_source}",
+        "format-muted": "\udb81\udf5f {format_source}",
+        "format-source": "{volume}% \udb80\udf6c",
+        "format-source-muted": "\udb80\udf6d",
         "format-icons": {
-            "headphone": "󰋋",
-            "hands-free": "󰥰",
-            "headset": "󰋎",
-            "phone": "󰏲",
-            "portable": "󰄝",
-            "car": "󰄋",
-            "default": ["󰕿", "󰖀", "󰕾"]
+            "headphone": "\udb80\udecb",
+            "hands-free": "\udb82\udd70",
+            "headset": "\udb80\udece",
+            "phone": "\udb80\udff2",
+            "portable": "\udb80\udd1d",
+            "car": "\udb80\udd0b",
+            "default": [
+                "\udb81\udd7f",
+                "\udb81\udd80",
+                "\udb81\udd7e"
+            ]
         },
         "on-click": "pavucontrol"
     },
-	"custom/btop": {
-	  "format": "󰓅",
-	  "tooltip": true,
-	  "tooltip-format": "btop: resource monitor",
-	  "on-click": "kitty -e btop"
+    "custom/btop": {
+        "format": "\udb81\udcc5",
+        "tooltip": true,
+        "tooltip-format": "btop: resource monitor",
+        "on-click": "kitty -e btop"
     },
     "custom/power": {
-        "format": "󰐥",
+        "format": "\udb81\udc25",
         "tooltip": false,
         "on-click": "~/.config/waybar/powermenu-fuzzel.sh"
     },
+    "cava": {
+        "framerate": 60,
+        "autosens": 1,
+        "sensitivity": 4,
+        "bars": 16,
+        "method": "pipewire",
+        "input_delay": 1,
+        "mono": true,
+        "stereo": false,
+        "monstercat": true,
+        "waves": true,
+        "format-icons": [
+            "▁",
+            "▂",
+            "▃",
+            "▄",
+            "▅",
+            "▆",
+            "▇"
+        ],
+        "tooltip": false
+    }
 }
