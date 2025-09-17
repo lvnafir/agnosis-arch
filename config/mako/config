@@ -1,5 +1,5 @@
 # Mako notification daemon configuration
-# Catppuccin Mocha color scheme matching waybar
+# Colors dynamically updated by pywal integration script
 
 # Default notification settings
 sort=-time
@@ -18,7 +18,7 @@ default-timeout=5000
 ignore-timeout=0
 font=sans-serif 11
 
-# Catppuccin Mocha colors
+# Colors updated by mako-pywal-update script
 background-color=#0c0c1b
 text-color=#c2c2c6
 border-color=#632843

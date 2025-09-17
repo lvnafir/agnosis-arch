@@ -33,7 +33,7 @@ config/waybar/config
 
 config/waybar/style.css
   → ~/.config/waybar/style.css
-  Purpose: Waybar styling with Catppuccin Mocha theme colors.
+  Purpose: Waybar styling with dynamic pywal colors (updated by scripts).
 
 config/waybar/powermenu-fuzzel.sh
   → ~/.config/waybar/powermenu-fuzzel.sh
@@ -51,7 +51,7 @@ FUZZEL CONFIGURATION
 
 config/fuzzel/fuzzel.ini
   → ~/.config/fuzzel/fuzzel.ini
-  Purpose: Global fuzzel launcher configuration with Catppuccin Mocha theme.
+  Purpose: Global fuzzel launcher configuration with dynamic pywal colors.
            Defines colors, fonts, borders, and keybindings for all fuzzel menus.
 
 ================================================================================
@@ -60,60 +60,80 @@ MAKO CONFIGURATION
 
 config/mako/config
   → ~/.config/mako/config
-  Purpose: Notification daemon configuration with Catppuccin Mocha theme.
+  Purpose: Notification daemon configuration with dynamic pywal colors.
            Defines notification appearance, positioning, timeouts, and urgency levels.
 
 ================================================================================
 PACKAGE LISTS
 ================================================================================
 
-packages/pacman-pkglist-exp.txt
-  Purpose: List of explicitly installed pacman packages (manually installed).
-           Use: pacman -S --needed - < pacman-pkglist-exp.txt
+packages/min-pacman-list.txt
+  Purpose: Minimal essential pacman packages (49 packages vs 1046 full system).
+           Includes: system base, Hyprland desktop, essential tools, drivers.
+           Use: pacman -S --needed - < min-pacman-list.txt
 
-packages/pacman-pkglist-all.txt
-  Purpose: Complete list of all installed pacman packages.
-           Reference for full system package state.
+packages/min-aur-list.txt
+  Purpose: Minimal essential AUR packages (2 packages: pywal16, waybar-cava).
+           Use: paru -S --needed - < min-aur-list.txt
 
-packages/pacman-pkglist-deps.txt
-  Purpose: List of dependency packages (automatically installed).
-           Reference for packages pulled in as dependencies.
-
-packages/aur-pkglist-all.txt
-  Purpose: List of all AUR (Arch User Repository) packages.
-           Use with paru or yay for installation.
+packages/min-pkglist-ref.txt
+  Purpose: Reference documentation showing all package categories and purposes.
+           Complete breakdown of what each package provides.
 
 ================================================================================
-INSTALLATION NOTES
+BOOTSTRAP SCRIPT INSTALLATION
 ================================================================================
 
-1. Fuzzel has replaced wofi as the application launcher and menu system.
-   - All menus use unified styling from fuzzel.ini
-   - No need for wofi configuration anymore
+The automated bootstrap script (scripts/bootstrap.sh) handles complete system setup:
 
-2. The waybar scripts require:
-   - fuzzel (for menus)
-   - iwctl (for WiFi management)
-   - notify-send (for notifications)
-   - systemctl (for power operations)
-   - hyprlock (for screen locking)
+1. **Make Scripts Executable**: Sets permissions on all scripts
+2. **Install Minimal Packages**: 49 essential packages with optimized mirrors
+3. **Install AUR Packages**: 2 AUR packages (pywal16, waybar-cava)
+4. **Create Directories**: All necessary config directories
+5. **Migrate Configs**: Copies all configuration files
+6. **Install Pywal Scripts**: Dynamic theming integration to ~/.local/bin/
+7. **Copy System Files**: NVIDIA/ACPI system configurations
+8. **Start Services**: Bluetooth, iwd, ly, ssh, reflector, pipewire
+9. **Reload Configs**: Refreshes Hyprland configuration
 
-3. Make scripts executable after copying:
+Usage: cd ~/build/noesis-arch && ./scripts/bootstrap.sh
+
+================================================================================
+MANUAL INSTALLATION NOTES
+================================================================================
+
+1. **Package Installation**:
+   # Minimal setup (recommended)
+   sudo pacman -S --needed - < packages/min-pacman-list.txt
+   paru -S --needed - < packages/min-aur-list.txt
+
+2. **Pywal Integration**:
+   - Copy scripts/pywal-integration/* to ~/.local/bin/
+   - Ensure ~/.local/bin is in PATH
+   - Scripts: fuzzel-pywal-update, hyprland-pywal-update, mako-pywal-update
+
+3. **Service Requirements**:
+   - fuzzel (application launcher and menus)
+   - iwd (WiFi management, no NetworkManager)
+   - ly (display manager)
+   - pipewire (audio system)
+
+4. **Make scripts executable**:
    chmod +x ~/.config/waybar/*.sh
+   chmod +x ~/.local/bin/*-pywal-update
 
-4. Restart services after copying configs:
-   - Reload Hyprland config: hyprctl reload
+5. **Restart services**:
+   - Reload Hyprland: hyprctl reload
    - Restart Waybar: pkill waybar && waybar &
 
 ================================================================================
 KEY CHANGES IN THIS CONFIGURATION
 ================================================================================
 
-• Switched from wofi to fuzzel for all menus
-• Unified theming through fuzzel.ini (Catppuccin Mocha)
-• Simplified scripts - styling moved to central config
-• Added btop button to waybar (replaced easyeffects)
-• App menu button now launches fuzzel directly
-• Vim-style keybindings in fuzzel (j/k for navigation)
-
+• **Minimal Package System**: Reduced from 1046 to 49 packages (95% reduction)
+• **Dynamic Theming**: Pywal integration with fuzzel, mako, waybar, hyprland
+• **Optimized Bootstrap**: Automated setup with reflector mirror optimization
+• **iwd Only**: No NetworkManager bloat, pure iwd wireless management
+• **Fuzzel Everywhere**: Unified launcher system replacing wofi
+• **Essential Focus**: Core functionality without gaming/AI/development bloat
 ================================================================================

@@ -87,27 +87,32 @@ chmod_all_scripts() {
 }
 
 install_packages() {
-    print_header "Installing official repository packages"
+    print_header "Installing minimal essential packages"
 
-    PKGLIST="$REPO_DIR/packages/pacman-pkglist.txt"
+    PKGLIST="$REPO_DIR/packages/min-pacman-list.txt"
 
     if [[ ! -f "$PKGLIST" ]]; then
-        print_error "Package list not found: $PKGLIST"
+        print_error "Minimal package list not found: $PKGLIST"
         return 1
     fi
 
-    print_info "Installing $(wc -l < "$PKGLIST") official packages..."
-    sudo pacman -S --needed --noconfirm - < "$PKGLIST"
-    print_success "Official package installation completed"
+    # Update mirrors before package installation for faster downloads
+    print_info "Updating package mirrors with reflector..."
+    sudo reflector --country US --age 12 --protocol https --sort rate --connection-timeout 2 --save /etc/pacman.d/mirrorlist
+    print_success "Updated package mirrors"
+
+    print_info "Installing $(wc -l < "$PKGLIST") essential packages..."
+    sudo pacman -Sy --needed --noconfirm - < "$PKGLIST"
+    print_success "Essential package installation completed"
 }
 
 install_aur_packages() {
-    print_header "Installing AUR packages"
+    print_header "Installing minimal AUR packages"
 
-    AUR_PKGLIST="$REPO_DIR/packages/aur-pkglist.txt"
+    AUR_PKGLIST="$REPO_DIR/packages/min-aur-list.txt"
 
     if [[ ! -f "$AUR_PKGLIST" ]]; then
-        print_error "AUR package list not found: $AUR_PKGLIST"
+        print_error "Minimal AUR package list not found: $AUR_PKGLIST"
         return 1
     fi
 
@@ -146,6 +151,7 @@ create_directories() {
         "$CONFIG_DIR/fuzzel"
         "$CONFIG_DIR/mako"
         "$CONFIG_DIR/kitty"
+        "$CONFIG_DIR/ranger"
         "$HOME/Pictures/Screenshots"
         "$HOME/Pictures/wallpapers"
     )
@@ -178,6 +184,11 @@ migrate_config_files() {
         ["$REPO_DIR/config/waybar/setup_cava.py"]="$CONFIG_DIR/waybar/setup_cava.py"
         ["$REPO_DIR/config/fuzzel/fuzzel.ini"]="$CONFIG_DIR/fuzzel/fuzzel.ini"
         ["$REPO_DIR/config/mako/config"]="$CONFIG_DIR/mako/config"
+        ["$REPO_DIR/config/ranger/rc.conf"]="$CONFIG_DIR/ranger/rc.conf"
+        ["$REPO_DIR/config/ranger/rifle.conf"]="$CONFIG_DIR/ranger/rifle.conf"
+        ["$REPO_DIR/config/ranger/scope.sh"]="$CONFIG_DIR/ranger/scope.sh"
+        ["$REPO_DIR/config/ranger/commands.py"]="$CONFIG_DIR/ranger/commands.py"
+        ["$REPO_DIR/config/ranger/commands_full.py"]="$CONFIG_DIR/ranger/commands_full.py"
     )
     
     for src in "${!files[@]}"; do
@@ -270,21 +281,6 @@ copy_system_files() {
 start_services() {
     print_header "Starting and enabling services"
     
-    # NetworkManager for network management
-    if systemctl is-enabled --quiet NetworkManager; then
-        print_info "NetworkManager is already enabled"
-    else
-        sudo systemctl enable NetworkManager
-        print_success "Enabled NetworkManager"
-    fi
-    
-    if systemctl is-active --quiet NetworkManager; then
-        print_info "NetworkManager is already running"
-    else
-        sudo systemctl start NetworkManager
-        print_success "Started NetworkManager"
-    fi
-    
     # Bluetooth service (bluez package)
     if systemctl is-enabled --quiet bluetooth; then
         print_info "Bluetooth is already enabled"
@@ -360,40 +356,6 @@ start_services() {
         print_success "Started reflector timer"
     fi
     
-    # ThinkPad fan control (thinkfan package)
-    if [[ -f /proc/acpi/ibm/fan ]]; then
-        if systemctl is-enabled --quiet thinkfan; then
-            print_info "ThinkFan is already enabled"
-        else
-            sudo systemctl enable thinkfan
-            print_success "Enabled ThinkFan service"
-        fi
-        
-        if systemctl is-active --quiet thinkfan; then
-            print_info "ThinkFan is already running"
-        else
-            sudo systemctl start thinkfan
-            print_success "Started ThinkFan service"
-        fi
-    else
-        print_info "ThinkFan not configured (not a ThinkPad or module not loaded)"
-    fi
-    
-    # Throttled for thermal/power management
-    if systemctl is-enabled --quiet throttled; then
-        print_info "Throttled is already enabled"
-    else
-        sudo systemctl enable throttled
-        print_success "Enabled throttled service"
-    fi
-    
-    if systemctl is-active --quiet throttled; then
-        print_info "Throttled is already running"
-    else
-        sudo systemctl start throttled
-        print_success "Started throttled service"
-    fi
-    
     # Zram generator for swap compression
     if systemctl is-enabled --quiet systemd-zram-setup@zram0.service; then
         print_info "Zram is already configured"
@@ -440,8 +402,8 @@ main() {
     echo ""
     echo "This script will help you set up your Arch system with:"
     echo "  1. Make all scripts executable"
-    echo "  2. Install official repository packages"
-    echo "  3. Install AUR packages (with paru)"
+    echo "  2. Install minimal essential packages (~44 vs 1046)"
+    echo "  3. Install minimal AUR packages (~2 vs 19)"
     echo "  4. Create necessary directories"
     echo "  5. Migrate configuration files"
     echo "  6. Install pywal integration scripts"
@@ -465,28 +427,30 @@ main() {
         print_info "Skipped making scripts executable"
     fi
     
-    # Step 2: Install official packages
+    # Step 2: Install minimal essential packages
     echo ""
-    if ask_yes_no "Install official repository packages?"; then
+    echo "Minimal essential packages (~44 packages vs 1046 full list):"
+    echo "  - System base, networking (iwd), drivers (nvidia)"
+    echo "  - Hyprland desktop environment"
+    echo "  - Essential tools (neovim, ranger, btop, chromium)"
+    echo ""
+    if ask_yes_no "Install minimal essential packages?"; then
         install_packages
     else
-        print_info "Skipped official package installation"
+        print_info "Skipped minimal package installation"
     fi
 
-    # Step 3: Install AUR packages
+    # Step 3: Install minimal AUR packages
     echo ""
-    echo "AUR packages to install:"
-    if [[ -f "$REPO_DIR/packages/aur-pkglist.txt" ]]; then
-        head -5 "$REPO_DIR/packages/aur-pkglist.txt" | sed 's/^/  - /'
-        if [[ $(wc -l < "$REPO_DIR/packages/aur-pkglist.txt") -gt 5 ]]; then
-            echo "  ... and $(($(wc -l < "$REPO_DIR/packages/aur-pkglist.txt") - 5)) more"
-        fi
+    echo "Minimal AUR packages (~2 packages vs 19 full list):"
+    if [[ -f "$REPO_DIR/packages/min-aur-list.txt" ]]; then
+        cat "$REPO_DIR/packages/min-aur-list.txt" | sed 's/^/  - /'
     fi
     echo ""
-    if ask_yes_no "Install AUR packages (requires paru)?"; then
+    if ask_yes_no "Install minimal AUR packages (requires paru)?"; then
         install_aur_packages
     else
-        print_info "Skipped AUR package installation"
+        print_info "Skipped minimal AUR package installation"
     fi
     
     # Step 4: Create directories
@@ -535,16 +499,13 @@ main() {
     # Step 8: Start services
     echo ""
     echo "Services to enable/start:"
-    echo "  - NetworkManager (network management)"
     echo "  - bluetooth (Bluetooth support)"
     echo "  - iwd (wireless networking)"
     echo "  - ly (display manager)"
     echo "  - sshd (SSH server)"
     echo "  - reflector.timer (mirrorlist updates)"
-    echo "  - throttled (thermal management)"
     echo "  - zram (compressed swap)"
     echo "  - pipewire (audio)"
-    echo "  - thinkfan (if ThinkPad detected)"
     echo ""
     if ask_yes_no "Start and enable system services?"; then
         start_services
