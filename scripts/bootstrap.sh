@@ -152,6 +152,7 @@ create_directories() {
         "$CONFIG_DIR/mako"
         "$CONFIG_DIR/kitty"
         "$CONFIG_DIR/ranger"
+        "$CONFIG_DIR/wal/templates"
         "$HOME/Pictures/Screenshots"
         "$HOME/Pictures/wallpapers"
     )
@@ -189,6 +190,7 @@ migrate_config_files() {
         ["$REPO_DIR/config/ranger/scope.sh"]="$CONFIG_DIR/ranger/scope.sh"
         ["$REPO_DIR/config/ranger/commands.py"]="$CONFIG_DIR/ranger/commands.py"
         ["$REPO_DIR/config/ranger/commands_full.py"]="$CONFIG_DIR/ranger/commands_full.py"
+        ["$REPO_DIR/config/wal/templates/colors-waybar.css"]="$CONFIG_DIR/wal/templates/colors-waybar.css"
     )
     
     for src in "${!files[@]}"; do
@@ -278,9 +280,9 @@ copy_system_files() {
     fi
 }
 
-start_services() {
-    print_header "Starting and enabling services"
-    
+enable_services() {
+    print_header "Enabling services"
+
     # Bluetooth service (bluez package)
     if systemctl is-enabled --quiet bluetooth; then
         print_info "Bluetooth is already enabled"
@@ -288,14 +290,7 @@ start_services() {
         sudo systemctl enable bluetooth
         print_success "Enabled bluetooth service"
     fi
-    
-    if systemctl is-active --quiet bluetooth; then
-        print_info "Bluetooth is already running"
-    else
-        sudo systemctl start bluetooth
-        print_success "Started bluetooth service"
-    fi
-    
+
     # IWD for wireless networking
     if systemctl is-enabled --quiet iwd; then
         print_info "iwd is already enabled"
@@ -303,14 +298,7 @@ start_services() {
         sudo systemctl enable iwd
         print_success "Enabled iwd service"
     fi
-    
-    if systemctl is-active --quiet iwd; then
-        print_info "iwd is already running"
-    else
-        sudo systemctl start iwd
-        print_success "Started iwd service"
-    fi
-    
+
     # Ly display manager
     if systemctl is-enabled --quiet ly; then
         print_info "ly display manager is already enabled"
@@ -318,14 +306,7 @@ start_services() {
         sudo systemctl enable ly
         print_success "Enabled ly display manager"
     fi
-    
-    if systemctl is-active --quiet ly; then
-        print_info "ly display manager is already running"
-    else
-        sudo systemctl start ly
-        print_success "Started ly display manager"
-    fi
-    
+
     # SSH daemon (openssh package)
     if systemctl is-enabled --quiet sshd; then
         print_info "SSH daemon is already enabled"
@@ -333,14 +314,7 @@ start_services() {
         sudo systemctl enable sshd
         print_success "Enabled SSH daemon"
     fi
-    
-    if systemctl is-active --quiet sshd; then
-        print_info "SSH daemon is already running"
-    else
-        sudo systemctl start sshd
-        print_success "Started SSH daemon"
-    fi
-    
+
     # Reflector timer for mirrorlist updates
     if systemctl is-enabled --quiet reflector.timer; then
         print_info "Reflector timer is already enabled"
@@ -348,14 +322,7 @@ start_services() {
         sudo systemctl enable reflector.timer
         print_success "Enabled reflector timer for mirrorlist updates"
     fi
-    
-    if systemctl is-active --quiet reflector.timer; then
-        print_info "Reflector timer is already active"
-    else
-        sudo systemctl start reflector.timer
-        print_success "Started reflector timer"
-    fi
-    
+
     # Zram generator for swap compression
     if systemctl is-enabled --quiet systemd-zram-setup@zram0.service; then
         print_info "Zram is already configured"
@@ -364,23 +331,12 @@ start_services() {
         sudo systemctl enable systemd-zram-setup@zram0.service
         print_success "Enabled zram compression"
     fi
-    
-    # Pipewire and Wireplumber for audio
+
+    # Pipewire and Wireplumber for audio (user services)
     systemctl --user enable pipewire pipewire-pulse wireplumber 2>/dev/null || true
-    systemctl --user start pipewire pipewire-pulse wireplumber 2>/dev/null || true
-    print_success "Ensured Pipewire audio services are running"
-    
-    # Mako notification daemon (user service) - only if in graphical session
-    if [ -n "$DISPLAY" ] || [ -n "$WAYLAND_DISPLAY" ]; then
-        if pgrep -x "mako" > /dev/null; then
-            print_info "Mako notification daemon is already running"
-        else
-            mako &
-            print_success "Started Mako notification daemon"
-        fi
-    else
-        print_info "Skipping Mako (no graphical session detected)"
-    fi
+    print_success "Enabled Pipewire audio services"
+
+    print_info "Services enabled. They will start on next boot or can be started manually with 'systemctl start <service>'"
 }
 
 reload_configs() {
@@ -408,7 +364,7 @@ main() {
     echo "  5. Migrate configuration files"
     echo "  6. Install pywal integration scripts"
     echo "  7. Copy system files (modprobe.d for NVIDIA/ACPI)"
-    echo "  8. Start and enable system services"
+    echo "  8. Enable system services"
     echo "  9. Reload configurations"
     echo ""
     echo "You will be prompted at each major step."
@@ -496,9 +452,9 @@ main() {
         print_info "Skipped system file configuration"
     fi
     
-    # Step 8: Start services
+    # Step 8: Enable services
     echo ""
-    echo "Services to enable/start:"
+    echo "Services to enable:"
     echo "  - bluetooth (Bluetooth support)"
     echo "  - iwd (wireless networking)"
     echo "  - ly (display manager)"
@@ -507,8 +463,8 @@ main() {
     echo "  - zram (compressed swap)"
     echo "  - pipewire (audio)"
     echo ""
-    if ask_yes_no "Start and enable system services?"; then
-        start_services
+    if ask_yes_no "Enable system services?"; then
+        enable_services
     else
         print_info "Skipped service configuration"
     fi

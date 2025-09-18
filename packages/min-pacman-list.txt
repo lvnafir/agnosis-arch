@@ -20,7 +20,6 @@ pipewire-alsa
 pipewire-pulse
 pipewire-jack
 hyprland
-waybar
 mako
 fuzzel
 hyprlock
@@ -35,7 +34,6 @@ ttf-cascadia-code-nerd
 noto-fonts
 noto-fonts-cjk
 noto-fonts-emoji
-lspci
 usbutils
 dmidecode
 intel-ucode
