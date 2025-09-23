@@ -94,6 +94,10 @@ chmod_all_scripts() {
 install_packages() {
     print_header "Hardware-aware package installation"
 
+    # Sync package database first
+    print_info "Syncing package database..."
+    sudo pacman -Sy
+
     # Install hardware detection dependencies first
     print_info "Installing hardware detection dependencies..."
     sudo pacman -S --needed --noconfirm dmidecode usbutils pciutils reflector
