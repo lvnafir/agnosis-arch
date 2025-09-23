@@ -96,7 +96,7 @@ install_packages() {
 
     # Install hardware detection dependencies first
     print_info "Installing hardware detection dependencies..."
-    sudo pacman -S --needed --noconfirm dmidecode usbutils pciutils
+    sudo pacman -S --needed --noconfirm dmidecode usbutils pciutils reflector
 
     # Detect hardware
     print_info "Detecting hardware configuration..."
