@@ -249,10 +249,12 @@ configure_packages() {
         "linux (stable)" \
         "linux-lts (long-term)"
 
-    case $? in
+    local kernel_choice=$?
+    case $kernel_choice in
         0) KERNEL_PKG="linux-zen" ;;
         1) KERNEL_PKG="linux" ;;
         2) KERNEL_PKG="linux-lts" ;;
+        *) error_exit "Invalid kernel selection" ;;
     esac
 
     # Network management
@@ -260,9 +262,11 @@ configure_packages() {
         "iwd + dhcpcd (minimal)" \
         "NetworkManager (full-featured)"
 
-    case $? in
+    local network_choice=$?
+    case $network_choice in
         0) NETWORK_PKGS="iwd dhcpcd" ;;
         1) NETWORK_PKGS="networkmanager wpa_supplicant" ;;
+        *) error_exit "Invalid network selection" ;;
     esac
 
     # File manager
@@ -271,10 +275,12 @@ configure_packages() {
         "broot (modern terminal)" \
         "nnn (minimal terminal)"
 
-    case $? in
+    local file_choice=$?
+    case $file_choice in
         0) FILE_MANAGER="ranger" ;;
         1) FILE_MANAGER="broot" ;;
         2) FILE_MANAGER="nnn" ;;
+        *) error_exit "Invalid file manager selection" ;;
     esac
 
     # Text editor
@@ -297,10 +303,12 @@ configure_packages() {
         "htop (classic)" \
         "top (minimal)"
 
-    case $? in
+    local monitor_choice=$?
+    case $monitor_choice in
         0) SYSTEM_MONITOR="btop" ;;
         1) SYSTEM_MONITOR="htop" ;;
         2) SYSTEM_MONITOR="top" ;;
+        *) error_exit "Invalid system monitor selection" ;;
     esac
 
     # Web browser
@@ -309,10 +317,12 @@ configure_packages() {
         "lynx (classic)" \
         "w3m (advanced)"
 
-    case $? in
+    local browser_choice=$?
+    case $browser_choice in
         0) WEB_BROWSER="links" ;;
         1) WEB_BROWSER="lynx" ;;
         2) WEB_BROWSER="w3m" ;;
+        *) error_exit "Invalid browser selection" ;;
     esac
 
     # SSH server
@@ -321,10 +331,12 @@ configure_packages() {
         "Install only" \
         "Don't install"
 
-    case $? in
+    local ssh_choice=$?
+    case $ssh_choice in
         0) ENABLE_SSH="enable" ;;
         1) ENABLE_SSH="install" ;;
         2) ENABLE_SSH="no" ;;
+        *) error_exit "Invalid SSH selection" ;;
     esac
 
     # Validate selected packages exist
@@ -386,12 +398,14 @@ configure_storage() {
         "8GB swap partition" \
         "Custom size"
 
-    case $? in
+    local swap_choice=$?
+    case $swap_choice in
         0) SWAP_SIZE="" ;;
         1) SWAP_SIZE="2G" ;;
         2) SWAP_SIZE="4G" ;;
         3) SWAP_SIZE="8G" ;;
         4) read -p "Enter swap size (e.g., 1G, 512M): " SWAP_SIZE ;;
+        *) error_exit "Invalid swap selection" ;;
     esac
 
     # Partitioning
@@ -557,13 +571,15 @@ configure_system() {
         "es_ES.UTF-8 (Spanish)" \
         "Custom locale"
 
-    case $? in
+    local locale_choice=$?
+    case $locale_choice in
         0) LOCALE="en_US.UTF-8" ;;
         1) LOCALE="en_GB.UTF-8" ;;
         2) LOCALE="de_DE.UTF-8" ;;
         3) LOCALE="fr_FR.UTF-8" ;;
         4) LOCALE="es_ES.UTF-8" ;;
         5) read -p "Enter locale (e.g., ja_JP.UTF-8): " LOCALE ;;
+        *) error_exit "Invalid locale selection" ;;
     esac
 
     # Timezone selection
@@ -576,7 +592,8 @@ configure_system() {
         "Europe/Berlin (Germany)" \
         "Custom"
 
-    case $? in
+    local timezone_choice=$?
+    case $timezone_choice in
         0) TIMEZONE="America/New_York" ;;
         1) TIMEZONE="America/Chicago" ;;
         2) TIMEZONE="America/Denver" ;;
@@ -584,6 +601,7 @@ configure_system() {
         4) TIMEZONE="Europe/London" ;;
         5) TIMEZONE="Europe/Berlin" ;;
         6) read -p "Enter timezone (e.g., Asia/Tokyo): " TIMEZONE ;;
+        *) error_exit "Invalid timezone selection" ;;
     esac
 
     # Hostname validation
