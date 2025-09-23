@@ -1,18 +1,15 @@
 base
 base-devel
-linux
 linux-firmware
 sudo
 iwd
 ranger
+broot
 neovim
 nano
 links
 btop
 kitty
-nvidia-dkms
-nvidia-utils
-nvidia-settings
 bluez
 bluez-utils
 pipewire
@@ -36,7 +33,6 @@ noto-fonts-cjk
 noto-fonts-emoji
 usbutils
 dmidecode
-intel-ucode
 git
 openssh
 which
@@ -46,3 +42,6 @@ python
 npm
 ly
 reflector
+mesa
+lib32-mesa
+vulkan-icd-loader

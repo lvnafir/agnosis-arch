@@ -1,0 +1,3 @@
+python-pywal16
+waybar-cava
+bluetuith

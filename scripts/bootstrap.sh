@@ -58,7 +58,7 @@ ask_yes_no() {
 chmod_all_scripts() {
     print_header "Making all scripts executable"
     
-    find "$REPO_DIR/scripts" -type f -name "*.sh" -o -type f ! -name "*.*" | while read -r script; do
+    find "$REPO_DIR/scripts" -type f \( -name "*.sh" -o ! -name "*.*" \) -print0 | while IFS= read -r -d '' script; do
         if [[ -f "$script" && ! -x "$script" ]]; then
             chmod +x "$script"
             print_success "Made executable: $(basename "$script")"
@@ -87,32 +87,124 @@ chmod_all_scripts() {
 }
 
 install_packages() {
-    print_header "Installing minimal essential packages"
+    print_header "Hardware-aware package installation"
 
-    PKGLIST="$REPO_DIR/packages/min-pacman-list.txt"
-
-    if [[ ! -f "$PKGLIST" ]]; then
-        print_error "Minimal package list not found: $PKGLIST"
+    # Detect hardware
+    print_info "Detecting hardware configuration..."
+    if [[ ! -f "$REPO_DIR/scripts/detect-hardware.sh" ]]; then
+        print_error "Hardware detection script not found"
         return 1
     fi
 
-    # Update mirrors before package installation for faster downloads
-    print_info "Updating package mirrors with reflector..."
-    sudo reflector --country US --age 12 --protocol https --sort rate --connection-timeout 2 --save /etc/pacman.d/mirrorlist
+    # Source hardware detection
+    local hw_info=$("$REPO_DIR/scripts/detect-hardware.sh" --env)
+    eval "$hw_info"
+
+    print_success "Hardware detected: $CPU_VENDOR CPU, $GPU_TYPE GPU, $PLATFORM platform"
+    if [[ -n "$FEATURES" ]]; then
+        print_info "Special features: $FEATURES"
+    fi
+
+    # Update mirrors with detected country
+    print_info "Updating package mirrors for $COUNTRY..."
+    sudo reflector --country "$COUNTRY" --age 12 --protocol https --sort rate --connection-timeout 2 --save /etc/pacman.d/mirrorlist
     print_success "Updated package mirrors"
 
-    print_info "Installing $(wc -l < "$PKGLIST") essential packages..."
-    sudo pacman -Sy --needed --noconfirm - < "$PKGLIST"
-    print_success "Essential package installation completed"
+    # Collect package lists to install
+    local package_lists=()
+    local total_packages=0
+
+    # Base packages (always installed)
+    package_lists+=("$REPO_DIR/packages/base-pacman.txt")
+
+    # Kernel choice (ask user or default to zen)
+    if ask_yes_no "Use linux-zen kernel for better performance (recommended)?"; then
+        package_lists+=("$REPO_DIR/packages/linux-zen-pacman.txt")
+        print_info "Selected: linux-zen kernel"
+    else
+        package_lists+=("$REPO_DIR/packages/linux-stable-pacman.txt")
+        print_info "Selected: linux-stable kernel"
+    fi
+
+    # CPU-specific packages
+    case "$CPU_VENDOR" in
+        "intel")
+            package_lists+=("$REPO_DIR/packages/intel-cpu-pacman.txt")
+            print_info "Adding Intel CPU packages"
+            ;;
+        "amd")
+            package_lists+=("$REPO_DIR/packages/amd-cpu-pacman.txt")
+            print_info "Adding AMD CPU packages"
+            ;;
+        *)
+            print_warning "Unknown CPU vendor: $CPU_VENDOR - skipping CPU-specific packages"
+            ;;
+    esac
+
+    # GPU-specific packages
+    case "$GPU_TYPE" in
+        "nvidia"|"hybrid-nvidia")
+            package_lists+=("$REPO_DIR/packages/nvidia-gpu-pacman.txt")
+            print_info "Adding NVIDIA GPU packages"
+            ;;
+        "amd"|"hybrid-amd")
+            package_lists+=("$REPO_DIR/packages/amd-gpu-pacman.txt")
+            print_info "Adding AMD GPU packages"
+            ;;
+        "intel")
+            package_lists+=("$REPO_DIR/packages/intel-gpu-pacman.txt")
+            print_info "Adding Intel GPU packages"
+            ;;
+        *)
+            print_warning "Unknown GPU type: $GPU_TYPE - skipping GPU-specific packages"
+            ;;
+    esac
+
+    # Platform-specific packages
+    case "$PLATFORM" in
+        "laptop")
+            package_lists+=("$REPO_DIR/packages/laptop-pacman.txt")
+            print_info "Adding laptop packages (power management)"
+            ;;
+    esac
+
+    # Vendor-specific packages
+    case "$VENDOR" in
+        "thinkpad")
+            package_lists+=("$REPO_DIR/packages/thinkpad-pacman.txt")
+            print_info "Adding ThinkPad packages"
+            ;;
+    esac
+
+    # Count total packages
+    for list in "${package_lists[@]}"; do
+        if [[ -f "$list" ]]; then
+            total_packages=$((total_packages + $(grep -c . "$list")))
+        fi
+    done
+
+    print_info "Installing $total_packages packages from ${#package_lists[@]} package lists..."
+
+    # Install packages from all lists
+    for list in "${package_lists[@]}"; do
+        if [[ -f "$list" ]]; then
+            print_info "Installing packages from $(basename "$list")..."
+            sudo pacman -S --needed --noconfirm - < "$list"
+        else
+            print_warning "Package list not found: $list"
+        fi
+    done
+
+    print_success "Hardware-aware package installation completed"
 }
 
 install_aur_packages() {
-    print_header "Installing minimal AUR packages"
+    print_header "Installing AUR packages"
 
-    AUR_PKGLIST="$REPO_DIR/packages/min-aur-list.txt"
+    AUR_PKGLIST="$REPO_DIR/packages/base-aur.txt"
 
     if [[ ! -f "$AUR_PKGLIST" ]]; then
-        print_error "Minimal AUR package list not found: $AUR_PKGLIST"
+        print_error "AUR package list not found: $AUR_PKGLIST"
         return 1
     fi
 
@@ -125,6 +217,10 @@ install_aur_packages() {
 
         # Clone and build paru
         cd /tmp
+        if [[ -d "paru" ]]; then
+            print_info "Removing existing paru build directory"
+            rm -rf paru
+        fi
         git clone https://aur.archlinux.org/paru.git
         cd paru
         makepkg -si --noconfirm
@@ -201,7 +297,8 @@ migrate_config_files() {
                 cp "$dest" "$dest.bak.$(date +%Y%m%d_%H%M%S)"
             fi
             cp "$src" "$dest"
-            print_success "Migrated: $(basename "$src") → $(dirname "$dest" | sed "s|$HOME|~|")"
+            dest_display="${dest/#$HOME/~}"
+            print_success "Migrated: $(basename "$src") → $(dirname "$dest_display")"
         else
             print_error "Source file not found: $src"
         fi
@@ -210,6 +307,8 @@ migrate_config_files() {
     # Copy wallpapers
     if [[ -d "$REPO_DIR/wallpapers" ]]; then
         print_info "Copying wallpapers..."
+        # Ensure wallpapers directory exists
+        mkdir -p "$HOME/Pictures/wallpapers"
         for wallpaper in "$REPO_DIR/wallpapers"/*; do
             if [[ -f "$wallpaper" ]]; then
                 cp "$wallpaper" "$HOME/Pictures/wallpapers/"
@@ -229,26 +328,30 @@ install_pywal_scripts() {
 
     if [[ -d "$REPO_DIR/scripts/pywal-integration" ]]; then
         print_info "Copying pywal integration scripts..."
-        for script in "$REPO_DIR/scripts/pywal-integration"/*; do
-            if [[ -f "$script" ]]; then
-                script_name=$(basename "$script")
-                if [[ -f "$HOME/.local/bin/$script_name" ]]; then
-                    print_info "Backing up existing: ~/.local/bin/$script_name"
-                    cp "$HOME/.local/bin/$script_name" "$HOME/.local/bin/$script_name.bak.$(date +%Y%m%d_%H%M%S)"
-                fi
-                cp "$script" "$HOME/.local/bin/"
-                chmod +x "$HOME/.local/bin/$script_name"
-                print_success "Installed: $script_name → ~/.local/bin/"
+        # Use find to safely handle filenames with spaces
+        find "$REPO_DIR/scripts/pywal-integration" -type f -print0 | while IFS= read -r -d '' script; do
+            script_name=$(basename "$script")
+            if [[ -f "$HOME/.local/bin/$script_name" ]]; then
+                print_info "Backing up existing: ~/.local/bin/$script_name"
+                cp "$HOME/.local/bin/$script_name" "$HOME/.local/bin/$script_name.bak.$(date +%Y%m%d_%H%M%S)"
             fi
+            cp "$script" "$HOME/.local/bin/"
+            chmod +x "$HOME/.local/bin/$script_name"
+            print_success "Installed: $script_name → ~/.local/bin/"
         done
 
         # Ensure ~/.local/bin is in PATH
         if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
-            print_info "Adding ~/.local/bin to PATH in ~/.bashrc"
-            echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
-            print_success "Added ~/.local/bin to PATH"
+            # Check if the line already exists in .bashrc
+            if ! grep -Fxq 'export PATH="$HOME/.local/bin:$PATH"' "$HOME/.bashrc" 2>/dev/null; then
+                print_info "Adding ~/.local/bin to PATH in ~/.bashrc"
+                echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
+                print_success "Added ~/.local/bin to PATH"
+            else
+                print_info "~/.local/bin PATH entry already exists in ~/.bashrc"
+            fi
         else
-            print_info "~/.local/bin already in PATH"
+            print_info "~/.local/bin already in current PATH"
         fi
     else
         print_info "No pywal integration scripts to install"
@@ -261,16 +364,15 @@ copy_system_files() {
     # Copy modprobe.d files for NVIDIA and system configuration
     if [[ -d "$REPO_DIR/system/modprobe.d" ]]; then
         print_info "Copying modprobe.d configurations..."
-        for file in "$REPO_DIR/system/modprobe.d"/*.conf; do
-            if [[ -f "$file" ]]; then
-                filename=$(basename "$file")
-                if [[ -f "/etc/modprobe.d/$filename" ]]; then
-                    print_info "Backing up existing: /etc/modprobe.d/$filename"
-                    sudo cp "/etc/modprobe.d/$filename" "/etc/modprobe.d/$filename.bak.$(date +%Y%m%d_%H%M%S)"
-                fi
-                sudo cp "$file" "/etc/modprobe.d/"
-                print_success "Copied: $filename → /etc/modprobe.d/"
+        # Use find to safely handle the case where no .conf files exist
+        find "$REPO_DIR/system/modprobe.d" -name "*.conf" -type f -print0 | while IFS= read -r -d '' file; do
+            filename=$(basename "$file")
+            if [[ -f "/etc/modprobe.d/$filename" ]]; then
+                print_info "Backing up existing: /etc/modprobe.d/$filename"
+                sudo cp "/etc/modprobe.d/$filename" "/etc/modprobe.d/$filename.bak.$(date +%Y%m%d_%H%M%S)"
             fi
+            sudo cp "$file" "/etc/modprobe.d/"
+            print_success "Copied: $filename → /etc/modprobe.d/"
         done
         print_info "Regenerating initramfs for kernel module changes..."
         sudo mkinitcpio -P
@@ -333,8 +435,17 @@ enable_services() {
     fi
 
     # Pipewire and Wireplumber for audio (user services)
-    systemctl --user enable pipewire pipewire-pulse wireplumber 2>/dev/null || true
-    print_success "Enabled Pipewire audio services"
+    for service in pipewire pipewire-pulse wireplumber; do
+        if systemctl --user is-enabled --quiet "$service" 2>/dev/null; then
+            print_info "User service $service is already enabled"
+        else
+            if systemctl --user enable "$service" 2>/dev/null; then
+                print_success "Enabled user service: $service"
+            else
+                print_error "Failed to enable user service: $service (may not be installed yet)"
+            fi
+        fi
+    done
 
     print_info "Services enabled. They will start on next boot or can be started manually with 'systemctl start <service>'"
 }
@@ -352,21 +463,22 @@ reload_configs() {
 
 main() {
     clear
-    print_header "NOESIS ARCH BOOTSTRAP SCRIPT"
+    print_header "AGNOSIS ARCH BOOTSTRAP SCRIPT (TEST BRANCH)"
     echo "Repository: $REPO_DIR"
     echo "Configuration: $CONFIG_DIR"
     echo ""
     echo "This script will help you set up your Arch system with:"
     echo "  1. Make all scripts executable"
-    echo "  2. Install minimal essential packages (~44 vs 1046)"
-    echo "  3. Install minimal AUR packages (~2 vs 19)"
+    echo "  2. Hardware-aware package installation (adaptive to your system)"
+    echo "  3. Install AUR packages"
     echo "  4. Create necessary directories"
     echo "  5. Migrate configuration files"
     echo "  6. Install pywal integration scripts"
-    echo "  7. Copy system files (modprobe.d for NVIDIA/ACPI)"
+    echo "  7. Copy system files (modprobe.d - hardware-specific)"
     echo "  8. Enable system services"
     echo "  9. Reload configurations"
     echo ""
+    echo "Hardware detection will automatically select appropriate packages."
     echo "You will be prompted at each major step."
     echo ""
     

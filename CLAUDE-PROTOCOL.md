@@ -1,78 +1,91 @@
-# Claude Code Protocol for Noesis Arch System
+# Claude Code Protocol for Agnosis Arch System
 
-**System Profile**: Lenovo ThinkPad T15g Gen 1 running Arch Linux with Hyprland
-**Generated**: 2025-09-17
-**Purpose**: Comprehensive guidance for Claude Code interactions on this specific system
+**System Profile**: Hardware-agnostic Arch Linux configuration with Hyprland
+**Generated**: 2025-09-22
+**Purpose**: Comprehensive guidance for Claude Code interactions on diverse hardware configurations
 
-## Hardware Profile & Constraints
+## Hardware Detection & Adaptation
 
-### Verified System Specifications
-Based on system audit data from 2025-09-16:
+### Dynamic Hardware Support
+This configuration automatically detects and adapts to different hardware configurations:
 
-**CPU**: Intel(R) Core(TM) i7-10850H @ 2.70GHz
-- Architecture: x86_64 Comet Lake (10th gen)
-- Cores: 6 physical, 12 logical (hyperthreading)
-- Base frequency: 2.70GHz, Max boost: 5.10GHz
-- Cache: L1d/L1i 192 KiB (6 instances each), L2 1.5 MiB (6 instances), L3 12 MiB
-- Features: VT-x, Intel SGX, AVX2, AES-NI
+**Supported CPU Architectures**:
+- Intel x86_64 (with intel-ucode microcode updates)
+- AMD x86_64 (with amd-ucode microcode updates)
+- Automatic detection via `/proc/cpuinfo` vendor identification
 
-**GPU**: NVIDIA GeForce RTX 2070 Super with Max-Q Design
-- Device ID: 10de:1e91 (TU104M)
-- VRAM: 8192 MB dedicated
-- Driver: nvidia 580.82.09
-- Vulkan: 1.4.321 support
-- OpenGL: 4.6.0 support
+**Supported GPU Configurations**:
+- NVIDIA discrete graphics (with proprietary nvidia drivers)
+- AMD discrete graphics (with mesa/amdgpu drivers)
+- Intel integrated graphics (with mesa/i915 drivers)
+- Hybrid configurations (automatic detection and setup)
 
-**Display**: BOE 0x0853
-- Resolution: 1920x1080
-- DPI: 142
-- Size: 15.5" diagonal
-- Interface: eDP-1
+**Platform Support**:
+- Laptop configurations (with power management, thermal control)
+- Desktop configurations (with performance optimizations)
+- Automatic detection via DMI/ACPI information
 
-**Storage**: Samsung NVMe SSD Controller PM9C1a (DRAM-less)
-- Interface: PCIe NVMe
-- Device location: /dev/nvme0n1
+**Vendor-Specific Features**:
+- ThinkPad (fan control, TrackPoint, special keys)
+- Dell (thermal management, function keys)
+- Generic laptop features (brightness, battery management)
 
-**Network**:
-- WiFi: Intel Comet Lake PCH CNVi WiFi
-- Ethernet: Intel Ethernet Connection (11) I219-LM
+### Hardware Detection Commands
+The bootstrap script uses these commands for hardware detection:
 
-**Other Notable Hardware**:
-- Thunderbolt 3 controller (Intel JHL7540 Titan Ridge 4C)
-- Realtek RTS525A PCIe Card Reader
-- Bison Integrated Camera (USB)
+```bash
+# CPU vendor detection
+grep -m1 'vendor_id' /proc/cpuinfo | cut -d: -f2 | tr -d ' '
 
-### Hardware-Specific Constraints
+# GPU detection
+lspci | grep -E "(VGA|3D|Display)"
 
-**INTEL ONLY**: This system contains Intel CPU architecture exclusively. Do not suggest AMD-specific solutions, optimizations, or tools (e.g., amd-ucode, amd-gpu drivers, ryzen-specific optimizations).
+# Platform detection
+dmidecode -s chassis-type 2>/dev/null || echo "unknown"
 
-**NVIDIA ONLY**: This system uses NVIDIA discrete graphics exclusively. Do not suggest AMD GPU solutions (e.g., mesa-amd, amdgpu drivers, RADV), Intel integrated graphics optimizations, or multi-GPU AMD/Intel hybrid solutions.
+# Laptop vendor detection
+dmidecode -s system-manufacturer 2>/dev/null || echo "unknown"
+```
 
-**MOBILE PLATFORM**: This is a laptop with power management considerations. Prioritize solutions that account for thermal throttling, power efficiency, and mobile-specific hardware constraints.
+### Adaptive Configuration Strategy
+
+**CPU-Specific Adaptations**:
+- Intel: intel-ucode, Intel Turbo Boost, thermal management
+- AMD: amd-ucode, AMD Cool'n'Quiet, AMDGPU integration
+
+**GPU-Specific Adaptations**:
+- NVIDIA: proprietary drivers, CUDA support, Wayland compatibility
+- AMD: mesa drivers, Vulkan/OpenGL support, power management
+- Intel: integrated graphics optimization, Wayland native support
+
+**Platform-Specific Adaptations**:
+- Laptop: TLP power management, thermal throttling, suspend/hibernate
+- Desktop: performance governors, advanced cooling, multi-monitor
 
 ## Operating System & Environment
 
 ### Arch Linux Configuration
 - **Distribution**: Arch Linux (rolling release)
-- **Kernel**: linux-zen (custom builds via noesis-arch)
+- **Kernel**: linux-zen (optimized for desktop/laptop performance)
 - **Init System**: systemd
 - **Display Server**: Wayland (via Hyprland compositor)
-- **Package Manager**: pacman (primary), yay/paru (AUR)
+- **Package Manager**: pacman (primary), paru (AUR helper)
 
 ### Desktop Environment Stack
-- **Compositor**: Hyprland 0.51.0
-- **Status Bar**: waybar
-- **Application Launcher**: fuzzel (replaced wofi)
-- **Notifications**: mako
-- **Screen Locker**: hyprlock
-- **Wallpaper Manager**: hyprpaper
-- **Theme**: Catppuccin Mocha (system-wide)
+- **Compositor**: Hyprland (latest stable)
+- **Status Bar**: waybar (with hardware-adaptive modules)
+- **Application Launcher**: fuzzel (lightweight and fast)
+- **Notifications**: mako (Wayland-native)
+- **Screen Locker**: hyprlock (Wayland-compatible)
+- **Wallpaper Manager**: swww (efficient Wayland wallpaper daemon)
+- **Theme**: Catppuccin Mocha (system-wide, pywal integration)
 
-### Current System State
-- **Kernel Version**: 6.16.6-zen1-1-zen (as of last audit)
-- **Display Server**: Xwayland 24.1.8 running under Hyprland
-- **GPU Driver State**: nvidia 580.82.09 loaded and functional
-- **Vulkan Layers**: Steam overlay and fossilize layers present
+### Adaptive System Components
+- **Audio**: PipeWire (universal audio server)
+- **Network**: iwd (for WiFi) + systemd-networkd (for Ethernet)
+- **Power Management**: TLP (laptops) or performance governors (desktops)
+- **Thermal Control**: Hardware-specific (ThinkPad fan control, generic laptop thermal management)
+- **Graphics Drivers**: Auto-detected and installed per hardware
 
 ## Command & Interaction Protocols
 
@@ -96,15 +109,15 @@ Claude Code does not have sudo privileges. When sudo commands are required:
 - **Reference Arch Wiki**: When suggesting complex procedures, reference relevant Arch Wiki articles
 
 ### Hardware-Aware Solutions
-- **CPU Optimizations**: Focus on Intel-specific features (Intel Turbo Boost, thermal management, intel-ucode)
-- **GPU Solutions**: Prioritize NVIDIA-specific tools (nvidia-smi, nvidia-settings, CUDA/Vulkan for NVIDIA)
-- **Power Management**: Consider laptop-specific power profiles and thermal constraints
-- **Module Loading**: Account for laptop-specific modules and hardware quirks
+- **CPU Optimizations**: Detect and apply vendor-specific optimizations (Intel Turbo Boost, AMD Cool'n'Quiet, appropriate microcode)
+- **GPU Solutions**: Auto-configure drivers and tools based on detected hardware (nvidia-smi for NVIDIA, radeontop for AMD, intel-gpu-tools for Intel)
+- **Power Management**: Adapt power profiles based on platform (laptop TLP configuration, desktop performance governors)
+- **Module Loading**: Apply hardware-specific modules and configurations (ThinkPad fan control, vendor-specific quirks)
 
 ## Directory Structure & File Organization
 
-### Noesis Arch Repository Structure
-Primary configuration location: `~/build/noesis-arch/`
+### Agnosis Arch Repository Structure
+Primary configuration location: `~/build/agnosis-arch/`
 
 **Core Configuration Directories**:
 - `config/hypr/` - Hyprland window manager configuration
@@ -135,13 +148,17 @@ Primary configuration location: `~/build/noesis-arch/`
 **Essential System Packages**:
 ```
 base base-devel linux-zen linux-zen-headers
-intel-ucode nvidia-dkms nvidia-utils nvidia-settings
+# CPU microcode (auto-selected based on vendor)
+intel-ucode OR amd-ucode
+# GPU drivers (auto-selected based on hardware)
+nvidia-dkms nvidia-utils nvidia-settings OR mesa vulkan-radeon OR mesa vulkan-intel
 ```
 
 **Hyprland Desktop Stack**:
 ```
-hyprland waybar fuzzel mako hyprlock hyprpaper
-xorg-xwayland pipewire wireplumber
+hyprland waybar fuzzel mako hyprlock
+swww xdg-desktop-portal-hyprland
+xorg-xwayland pipewire pipewire-pulse wireplumber
 ```
 
 **Network & Communication**:
@@ -184,25 +201,36 @@ vulkan-tools mesa-utils
 **Solution**: Reboot to use current kernel matching installed modules
 **Prevention**: Always reboot after kernel/module package updates
 
-### NVIDIA Driver Issues
+### GPU Driver Issues
 **Common Problems**:
 - Driver not loading after updates
 - Wayland compatibility issues
-- CUDA applications failing
+- Hardware acceleration failures
 
-**Standard Resolution**:
+**NVIDIA-Specific Resolution**:
 1. Verify module loading: `lsmod | grep nvidia`
 2. Check for nouveau conflicts: `lsmod | grep nouveau`
 3. Ensure proper kernel parameters: `nvidia-drm.modeset=1`
 4. Rebuild initramfs after module changes: `mkinitcpio -P`
 
+**AMD-Specific Resolution**:
+1. Verify module loading: `lsmod | grep amdgpu`
+2. Check firmware loading: `dmesg | grep amdgpu`
+3. Ensure proper kernel parameters for older cards: `radeon.si_support=0 amdgpu.si_support=1`
+
 ### Wayland/Hyprland GPU Integration
-**Required Environment Variables**:
+**NVIDIA Environment Variables**:
 ```
 LIBVA_DRIVER_NAME=nvidia
 GBM_BACKEND=nvidia-drm
 __GLX_VENDOR_LIBRARY_NAME=nvidia
 WLR_NO_HARDWARE_CURSORS=1
+```
+
+**AMD Environment Variables**:
+```
+LIBVA_DRIVER_NAME=radeonsi
+GBM_BACKEND=mesa
 ```
 
 **Service Reload Commands**:
@@ -227,35 +255,35 @@ systemctl --user restart mako   # Restart notifications
 - Clean build directories after successful installation
 
 ### System Optimization
-**Intel CPU Optimizations**:
-- Enable Intel Turbo Boost
-- Configure appropriate CPU governor
-- Monitor thermal throttling under load
+**CPU Optimizations (Hardware-Detected)**:
+- Intel: Enable Turbo Boost, configure thermal management, install intel-ucode
+- AMD: Enable Cool'n'Quiet, configure power profiles, install amd-ucode
+- Universal: Set appropriate CPU governor, monitor thermal throttling
 
-**NVIDIA GPU Optimizations**:
-- Use nvidia-smi for monitoring and configuration
-- Enable NVIDIA persistence daemon
-- Configure appropriate power management modes
+**GPU Optimizations (Hardware-Detected)**:
+- NVIDIA: nvidia-smi monitoring, persistence daemon, power management
+- AMD: radeontop monitoring, AMDGPU power profiles, Mesa optimizations
+- Intel: intel-gpu-tools, integrated graphics power management
 
 ## Interaction Guidelines Summary
 
-1. **System Specificity**: Only provide Arch Linux solutions for Intel/NVIDIA hardware
+1. **Hardware Agnostic**: Provide Arch Linux solutions that adapt to detected hardware (Intel/AMD CPU, NVIDIA/AMD/Intel GPU)
 2. **Research First**: Verify current syntax and tool availability before recommendations
 3. **No Sudo Access**: Present commands for user execution with clear instructions
-4. **Hardware Awareness**: Leverage Intel/NVIDIA specific capabilities and account for laptop constraints
+4. **Dynamic Hardware Awareness**: Auto-detect and leverage hardware-specific capabilities while accounting for platform constraints
 5. **Rolling Release Considerations**: Always verify that solutions are current and supported
 6. **Clean Operations**: Ensure build hygiene and provide cleanup steps
-7. **Reproducible Solutions**: Design deterministic, repeatable procedures
+7. **Reproducible Solutions**: Design deterministic, repeatable procedures that work across hardware configurations
 8. **Arch Way Compliance**: Follow simplicity, modernity, and user control principles
 
 ## Verification Commands
 
 **System Health Checks**:
 ```bash
-uname -a                    # Kernel version
-nvidia-smi                  # GPU status
-lsmod | grep nvidia        # NVIDIA modules
-systemctl --user status mako waybar  # Desktop services
+uname -a                              # Kernel version
+lspci | grep -E "(VGA|3D|Display)"   # GPU hardware detection
+lsmod | grep -E "(nvidia|amdgpu|i915)" # GPU driver modules
+systemctl --user status mako waybar   # Desktop services
 ```
 
 **Hardware Detection**:
@@ -273,4 +301,4 @@ systemctl --user list-units --failed
 journalctl -p 3 -xb       # System errors since boot
 ```
 
-This protocol ensures Claude Code provides relevant, accurate, and hardware-appropriate assistance for this specific Arch Linux system configuration.
+This protocol ensures Claude Code provides relevant, accurate, and hardware-appropriate assistance for diverse Arch Linux system configurations through dynamic hardware detection and adaptive configuration management.
