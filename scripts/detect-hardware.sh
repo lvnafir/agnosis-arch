@@ -62,7 +62,7 @@ detect_gpu() {
             amd_found=true
         fi
 
-        if echo "$gpu_info" | grep -iq "intel.*graphics"; then
+        if echo "$gpu_info" | grep -iq "intel"; then
             intel_found=true
         fi
     fi
