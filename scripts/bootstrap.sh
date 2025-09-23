@@ -359,26 +359,69 @@ install_pywal_scripts() {
 }
 
 copy_system_files() {
-    print_header "Copying system configuration files"
-    
-    # Copy modprobe.d files for NVIDIA and system configuration
+    print_header "Copying hardware-specific system configuration files"
+
+    # Load hardware detection results
+    local hw_file="/tmp/hardware-detection.env"
+    if [[ -f "$hw_file" ]]; then
+        source "$hw_file"
+    else
+        print_error "Hardware detection results not found. Run hardware detection first."
+        return 1
+    fi
+
+    local copied_configs=0
+
+    # Copy NVIDIA modprobe.d config only for NVIDIA systems
+    if [[ "$GPU_TYPE" == "nvidia" ]] && [[ -f "$REPO_DIR/system/modprobe.d/nvidia.conf" ]]; then
+        print_info "NVIDIA GPU detected - copying NVIDIA modprobe.d configuration..."
+        if [[ -f "/etc/modprobe.d/nvidia.conf" ]]; then
+            print_info "Backing up existing: /etc/modprobe.d/nvidia.conf"
+            sudo cp "/etc/modprobe.d/nvidia.conf" "/etc/modprobe.d/nvidia.conf.bak.$(date +%Y%m%d_%H%M%S)"
+        fi
+        sudo cp "$REPO_DIR/system/modprobe.d/nvidia.conf" "/etc/modprobe.d/"
+        print_success "Copied: nvidia.conf → /etc/modprobe.d/"
+        ((copied_configs++))
+    else
+        print_info "Non-NVIDIA system - skipping NVIDIA modprobe.d configuration"
+    fi
+
+    # Copy ThinkPad modprobe.d config only for ThinkPad systems
+    if [[ "$VENDOR" == "thinkpad" ]] && [[ -f "$REPO_DIR/system/modprobe.d/thinkpad_acpi.conf" ]]; then
+        print_info "ThinkPad detected - copying ThinkPad ACPI modprobe.d configuration..."
+        if [[ -f "/etc/modprobe.d/thinkpad_acpi.conf" ]]; then
+            print_info "Backing up existing: /etc/modprobe.d/thinkpad_acpi.conf"
+            sudo cp "/etc/modprobe.d/thinkpad_acpi.conf" "/etc/modprobe.d/thinkpad_acpi.conf.bak.$(date +%Y%m%d_%H%M%S)"
+        fi
+        sudo cp "$REPO_DIR/system/modprobe.d/thinkpad_acpi.conf" "/etc/modprobe.d/"
+        print_success "Copied: thinkpad_acpi.conf → /etc/modprobe.d/"
+        ((copied_configs++))
+    else
+        print_info "Non-ThinkPad system - skipping ThinkPad ACPI modprobe.d configuration"
+    fi
+
+    # Copy other universal modprobe.d configs (blacklist-ucsi.conf, etc.)
     if [[ -d "$REPO_DIR/system/modprobe.d" ]]; then
-        print_info "Copying modprobe.d configurations..."
-        # Use find to safely handle the case where no .conf files exist
-        find "$REPO_DIR/system/modprobe.d" -name "*.conf" -type f -print0 | while IFS= read -r -d '' file; do
+        find "$REPO_DIR/system/modprobe.d" -name "*.conf" -type f ! -name "nvidia.conf" ! -name "thinkpad_acpi.conf" -print0 | while IFS= read -r -d '' file; do
             filename=$(basename "$file")
+            print_info "Copying universal configuration: $filename"
             if [[ -f "/etc/modprobe.d/$filename" ]]; then
                 print_info "Backing up existing: /etc/modprobe.d/$filename"
                 sudo cp "/etc/modprobe.d/$filename" "/etc/modprobe.d/$filename.bak.$(date +%Y%m%d_%H%M%S)"
             fi
             sudo cp "$file" "/etc/modprobe.d/"
             print_success "Copied: $filename → /etc/modprobe.d/"
+            ((copied_configs++))
         done
+    fi
+
+    # Regenerate initramfs if any configs were copied
+    if [[ $copied_configs -gt 0 ]]; then
         print_info "Regenerating initramfs for kernel module changes..."
         sudo mkinitcpio -P
         print_success "Initramfs regenerated"
     else
-        print_info "No modprobe.d files to copy"
+        print_info "No hardware-specific configurations to apply"
     fi
 }
 
@@ -474,7 +517,7 @@ main() {
     echo "  4. Create necessary directories"
     echo "  5. Migrate configuration files"
     echo "  6. Install pywal integration scripts"
-    echo "  7. Copy system files (modprobe.d - hardware-specific)"
+    echo "  7. Copy hardware-specific system files (NVIDIA/ThinkPad configs only when detected)"
     echo "  8. Enable system services"
     echo "  9. Reload configurations"
     echo ""
