@@ -609,8 +609,37 @@ configure_system() {
     # Get username (hostname already validated)
     read -p "Enter username: " USERNAME
 
+    # Get passwords
+    print_info "Setting up passwords..."
+    while true; do
+        read -s -p "Enter root password: " ROOT_PASSWORD
+        echo ""
+        read -s -p "Confirm root password: " ROOT_PASSWORD_CONFIRM
+        echo ""
+        if [[ "$ROOT_PASSWORD" == "$ROOT_PASSWORD_CONFIRM" ]]; then
+            break
+        else
+            print_error "Passwords do not match. Please try again."
+        fi
+    done
+
+    while true; do
+        read -s -p "Enter password for $USERNAME: " USER_PASSWORD
+        echo ""
+        read -s -p "Confirm password for $USERNAME: " USER_PASSWORD_CONFIRM
+        echo ""
+        if [[ "$USER_PASSWORD" == "$USER_PASSWORD_CONFIRM" ]]; then
+            break
+        else
+            print_error "Passwords do not match. Please try again."
+        fi
+    done
+
     # Configure system in chroot (using explicit variable passing)
     print_info "Configuring system in chroot..."
+
+    # Ensure tmp directory exists in chroot
+    mkdir -p /mnt/tmp || error_exit "Failed to create /mnt/tmp directory"
 
     # Create configuration script to avoid variable scoping issues
     cat > /mnt/tmp/configure.sh << EOF
@@ -672,12 +701,12 @@ EOF
     arch-chroot /mnt /tmp/configure.sh || error_exit "System configuration failed"
     rm /mnt/tmp/configure.sh
 
-    # Set passwords (interactive, must be done separately)
-    print_info "Setting root password:"
-    arch-chroot /mnt passwd || error_exit "Failed to set root password"
+    # Set passwords (non-interactive using chpasswd)
+    print_info "Setting root password..."
+    echo "root:$ROOT_PASSWORD" | arch-chroot /mnt chpasswd || error_exit "Failed to set root password"
 
-    print_info "Setting user password for $USERNAME:"
-    arch-chroot /mnt passwd "$USERNAME" || error_exit "Failed to set user password"
+    print_info "Setting user password for $USERNAME..."
+    echo "$USERNAME:$USER_PASSWORD" | arch-chroot /mnt chpasswd || error_exit "Failed to set user password"
 
     print_success "System configuration complete"
 }
