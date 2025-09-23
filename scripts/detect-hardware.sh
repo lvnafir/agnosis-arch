@@ -58,7 +58,7 @@ detect_gpu() {
             nvidia_found=true
         fi
 
-        if echo "$gpu_info" | grep -iqE "(amd|ati|radeon)"; then
+        if echo "$gpu_info" | grep -iqE "\b(amd|ati|radeon)\b"; then
             amd_found=true
         fi
 
