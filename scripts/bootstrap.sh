@@ -558,17 +558,19 @@ main() {
         print_info "Skipped making scripts executable"
     fi
     
-    # Step 2: Install minimal essential packages
+    # Step 2: Install hardware-detected packages
     echo ""
-    echo "Minimal essential packages (~44 packages vs 1046 full list):"
-    echo "  - System base, networking (iwd), drivers (nvidia)"
+    echo "Hardware-aware package installation:"
+    echo "  - Base system packages (~47 packages)"
+    echo "  - Hardware-specific drivers (automatically detected)"
     echo "  - Hyprland desktop environment"
     echo "  - Essential tools (neovim, ranger, btop, chromium)"
+    echo "  - Platform-specific packages (laptop/desktop)"
     echo ""
-    if ask_yes_no "Install minimal essential packages?"; then
+    if ask_yes_no "Install packages with hardware detection?"; then
         install_packages
     else
-        print_info "Skipped minimal package installation"
+        print_info "Skipped package installation"
     fi
 
     # Step 3: Install minimal AUR packages
