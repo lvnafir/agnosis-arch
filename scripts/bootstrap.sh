@@ -113,6 +113,9 @@ install_packages() {
     local hw_info=$("$REPO_DIR/scripts/detect-hardware.sh" --env)
     eval "$hw_info"
 
+    # Save hardware detection results for later use
+    echo "$hw_info" > /tmp/hardware-detection.env
+
     print_success "Hardware detected: $CPU_VENDOR CPU, $GPU_TYPE GPU, $PLATFORM platform"
     if [[ -n "$FEATURES" ]]; then
         print_info "Special features: $FEATURES"
