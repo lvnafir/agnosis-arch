@@ -89,6 +89,10 @@ chmod_all_scripts() {
 install_packages() {
     print_header "Hardware-aware package installation"
 
+    # Install hardware detection dependencies first
+    print_info "Installing hardware detection dependencies..."
+    sudo pacman -S --needed --noconfirm dmidecode usbutils pciutils
+
     # Detect hardware
     print_info "Detecting hardware configuration..."
     if [[ ! -f "$REPO_DIR/scripts/detect-hardware.sh" ]]; then

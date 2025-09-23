@@ -178,7 +178,7 @@ detect_features() {
     fi
 
     # Check for AMD hybrid graphics
-    if lspci | grep -iq amd && lspci | grep -iq intel; then
+    if lspci | grep -iqE "\bamd\b" && lspci | grep -iq intel; then
         features+=("amd_hybrid")
     fi
 
