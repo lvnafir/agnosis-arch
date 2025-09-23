@@ -2,6 +2,11 @@
 
 set -e
 
+# Fix terminal compatibility issues (kitty, etc.)
+if [[ "$TERM" == "xterm-kitty" ]] && ! infocmp xterm-kitty &>/dev/null; then
+    export TERM=xterm-256color
+fi
+
 REPO_DIR="$(dirname "$(dirname "$(realpath "$0")")")"
 CONFIG_DIR="$HOME/.config"
 
