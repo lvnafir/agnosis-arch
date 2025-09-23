@@ -220,15 +220,26 @@ install_aur_packages() {
         sudo pacman -S --needed --noconfirm base-devel git
 
         # Clone and build paru
-        cd /tmp
+        cd /tmp || { print_error "Failed to change to /tmp directory"; return 1; }
         if [[ -d "paru" ]]; then
             print_info "Removing existing paru build directory"
             rm -rf paru
         fi
-        git clone https://aur.archlinux.org/paru.git
-        cd paru
-        makepkg -si --noconfirm
-        cd "$REPO_DIR"
+
+        if ! git clone https://aur.archlinux.org/paru.git; then
+            print_error "Failed to clone paru repository"
+            return 1
+        fi
+
+        cd paru || { print_error "Failed to enter paru directory"; return 1; }
+
+        if ! makepkg -si --noconfirm; then
+            print_error "Failed to build paru"
+            cd "$REPO_DIR"
+            return 1
+        fi
+
+        cd "$REPO_DIR" || { print_error "Failed to return to repo directory"; return 1; }
         print_success "Installed paru AUR helper"
     fi
 
