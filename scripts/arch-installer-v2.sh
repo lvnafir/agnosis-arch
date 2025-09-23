@@ -86,7 +86,10 @@ select_menu() {
     done
 
     while true; do
-        read -p "Select option (1-${#options[@]}): " choice
+        read -p "Select option (1-${#options[@]}): " choice || {
+            print_error "Read failed"
+            return 1
+        }
         if [[ "$choice" =~ ^[0-9]+$ ]] && [[ "$choice" -ge 1 ]] && [[ "$choice" -le "${#options[@]}" ]]; then
             return $((choice-1))
         else
@@ -280,10 +283,12 @@ configure_packages() {
         "vim (powerful)" \
         "neovim (modern)"
 
-    case $? in
+    local editor_choice=$?
+    case $editor_choice in
         0) TEXT_EDITOR="nano" ;;
         1) TEXT_EDITOR="vim" ;;
         2) TEXT_EDITOR="neovim" ;;
+        *) error_exit "Invalid text editor selection" ;;
     esac
 
     # System monitor
