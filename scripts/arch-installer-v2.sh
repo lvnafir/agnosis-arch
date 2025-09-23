@@ -26,6 +26,7 @@ declare EFI_PARTITION=""
 declare SWAP_PARTITION=""
 declare SWAP_SIZE=""
 declare LOCALE=""
+declare MENU_SELECTION=""
 
 # Selected packages (avoid variable scoping issues)
 declare KERNEL_PKG=""
@@ -73,7 +74,7 @@ error_exit() {
     exit 1
 }
 
-# Menu selection with validation
+# Menu selection with validation (using global variable to avoid return code issues)
 select_menu() {
     local prompt="$1"
     shift
@@ -91,7 +92,8 @@ select_menu() {
             return 1
         }
         if [[ "$choice" =~ ^[0-9]+$ ]] && [[ "$choice" -ge 1 ]] && [[ "$choice" -le "${#options[@]}" ]]; then
-            return $((choice-1))
+            MENU_SELECTION=$((choice-1))
+            return 0
         else
             print_error "Invalid choice. Please select 1-${#options[@]}"
         fi
@@ -249,8 +251,7 @@ configure_packages() {
         "linux (stable)" \
         "linux-lts (long-term)"
 
-    local kernel_choice=$?
-    case $kernel_choice in
+    case $MENU_SELECTION in
         0) KERNEL_PKG="linux-zen" ;;
         1) KERNEL_PKG="linux" ;;
         2) KERNEL_PKG="linux-lts" ;;
@@ -262,8 +263,7 @@ configure_packages() {
         "iwd + dhcpcd (minimal)" \
         "NetworkManager (full-featured)"
 
-    local network_choice=$?
-    case $network_choice in
+    case $MENU_SELECTION in
         0) NETWORK_PKGS="iwd dhcpcd" ;;
         1) NETWORK_PKGS="networkmanager wpa_supplicant" ;;
         *) error_exit "Invalid network selection" ;;
@@ -275,8 +275,7 @@ configure_packages() {
         "broot (modern terminal)" \
         "nnn (minimal terminal)"
 
-    local file_choice=$?
-    case $file_choice in
+    case $MENU_SELECTION in
         0) FILE_MANAGER="ranger" ;;
         1) FILE_MANAGER="broot" ;;
         2) FILE_MANAGER="nnn" ;;
@@ -289,8 +288,7 @@ configure_packages() {
         "vim (powerful)" \
         "neovim (modern)"
 
-    local editor_choice=$?
-    case $editor_choice in
+    case $MENU_SELECTION in
         0) TEXT_EDITOR="nano" ;;
         1) TEXT_EDITOR="vim" ;;
         2) TEXT_EDITOR="neovim" ;;
@@ -303,8 +301,7 @@ configure_packages() {
         "htop (classic)" \
         "top (minimal)"
 
-    local monitor_choice=$?
-    case $monitor_choice in
+    case $MENU_SELECTION in
         0) SYSTEM_MONITOR="btop" ;;
         1) SYSTEM_MONITOR="htop" ;;
         2) SYSTEM_MONITOR="top" ;;
@@ -317,8 +314,7 @@ configure_packages() {
         "lynx (classic)" \
         "w3m (advanced)"
 
-    local browser_choice=$?
-    case $browser_choice in
+    case $MENU_SELECTION in
         0) WEB_BROWSER="links" ;;
         1) WEB_BROWSER="lynx" ;;
         2) WEB_BROWSER="w3m" ;;
@@ -331,8 +327,7 @@ configure_packages() {
         "Install only" \
         "Don't install"
 
-    local ssh_choice=$?
-    case $ssh_choice in
+    case $MENU_SELECTION in
         0) ENABLE_SSH="enable" ;;
         1) ENABLE_SSH="install" ;;
         2) ENABLE_SSH="no" ;;
@@ -398,8 +393,7 @@ configure_storage() {
         "8GB swap partition" \
         "Custom size"
 
-    local swap_choice=$?
-    case $swap_choice in
+    case $MENU_SELECTION in
         0) SWAP_SIZE="" ;;
         1) SWAP_SIZE="2G" ;;
         2) SWAP_SIZE="4G" ;;
@@ -571,8 +565,7 @@ configure_system() {
         "es_ES.UTF-8 (Spanish)" \
         "Custom locale"
 
-    local locale_choice=$?
-    case $locale_choice in
+    case $MENU_SELECTION in
         0) LOCALE="en_US.UTF-8" ;;
         1) LOCALE="en_GB.UTF-8" ;;
         2) LOCALE="de_DE.UTF-8" ;;
@@ -592,8 +585,7 @@ configure_system() {
         "Europe/Berlin (Germany)" \
         "Custom"
 
-    local timezone_choice=$?
-    case $timezone_choice in
+    case $MENU_SELECTION in
         0) TIMEZONE="America/New_York" ;;
         1) TIMEZONE="America/Chicago" ;;
         2) TIMEZONE="America/Denver" ;;
