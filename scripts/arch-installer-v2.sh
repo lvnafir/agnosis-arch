@@ -638,11 +638,8 @@ configure_system() {
     # Configure system in chroot (using explicit variable passing)
     print_info "Configuring system in chroot..."
 
-    # Ensure tmp directory exists in chroot
-    mkdir -p /mnt/tmp || error_exit "Failed to create /mnt/tmp directory"
-
-    # Create configuration script to avoid variable scoping issues
-    cat > /mnt/tmp/configure.sh << EOF
+    # Create configuration script in root directory (more reliable than /tmp)
+    cat > /mnt/configure.sh << EOF
 #!/bin/bash
 set -euo pipefail
 
@@ -697,9 +694,9 @@ if [[ "$PLATFORM" == "laptop" ]]; then
 fi
 EOF
 
-    chmod +x /mnt/tmp/configure.sh
-    arch-chroot /mnt /tmp/configure.sh || error_exit "System configuration failed"
-    rm /mnt/tmp/configure.sh
+    chmod +x /mnt/configure.sh
+    arch-chroot /mnt /configure.sh || error_exit "System configuration failed"
+    rm /mnt/configure.sh
 
     # Set passwords (non-interactive using chpasswd)
     print_info "Setting root password..."
