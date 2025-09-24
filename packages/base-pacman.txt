@@ -45,3 +45,4 @@ reflector
 mesa
 lib32-mesa
 vulkan-icd-loader
+imagemagick
