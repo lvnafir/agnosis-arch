@@ -173,10 +173,15 @@ chmod_all_scripts() {
         return 1
     }
 
-    [[ -d "$CONFIG_DIR" ]] || {
-        print_error "Configuration directory not found: $CONFIG_DIR"
-        return 1
-    }
+    if [[ ! -d "$CONFIG_DIR" ]]; then
+        print_info "Creating configuration directory: $CONFIG_DIR"
+        if mkdir -p "$CONFIG_DIR"; then
+            print_success "Created configuration directory"
+        else
+            print_error "Failed to create configuration directory: $CONFIG_DIR"
+            return 1
+        fi
+    fi
 
     local made_executable=0 failed=0
 
