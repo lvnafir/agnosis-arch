@@ -896,6 +896,18 @@ initialize_pywal() {
         fi
     fi
 
+    # Install pywal hook script
+    print_info "Installing pywal hook script..."
+    local done_script="$REPO_DIR/scripts/pywal-integration/done.sh"
+    if [[ -f "$done_script" ]]; then
+        mkdir -p "$HOME/.config/wal"
+        cp "$done_script" "$HOME/.config/wal/done.sh"
+        chmod +x "$HOME/.config/wal/done.sh"
+        print_success "Installed pywal hook script"
+    else
+        print_warning "Pywal hook script not found at $done_script"
+    fi
+
     # Initialize pywal with the found/created wallpaper
     print_info "Initializing pywal with wallpaper: $default_wallpaper"
     wal -i "$default_wallpaper" -n
