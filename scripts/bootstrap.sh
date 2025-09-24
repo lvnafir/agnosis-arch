@@ -917,7 +917,7 @@ main() {
     # Step 1: Make scripts executable
     echo ""
     if ask_yes_no "Make all scripts executable?"; then
-        chmod_all_scripts
+        chmod_all_scripts || print_warning "Script permission changes completed with some errors"
     else
         print_info "Skipped making scripts executable"
     fi
@@ -961,7 +961,7 @@ main() {
     # Step 5: Migrate config files
     echo ""
     if ask_yes_no "Migrate configuration files (will backup existing files)?"; then
-        migrate_config_files
+        migrate_config_files || print_warning "Config file migration completed with some errors"
     else
         print_info "Skipped config file migration"
     fi
@@ -976,7 +976,7 @@ main() {
     echo "  - wallpaper (wallpaper management script)"
     echo ""
     if ask_yes_no "Install pywal integration scripts to ~/.local/bin/?"; then
-        install_pywal_scripts
+        install_pywal_scripts || print_warning "Pywal script installation completed with some errors"
     else
         print_info "Skipped pywal script installation"
     fi
@@ -990,7 +990,7 @@ main() {
     echo "  - Initialize pywal cache directory"
     echo ""
     if ask_yes_no "Initialize pywal with wallpaper and generate color schemes?"; then
-        initialize_pywal
+        initialize_pywal || print_warning "Pywal initialization completed with some errors"
     else
         print_info "Skipped pywal initialization"
     fi
@@ -1003,7 +1003,7 @@ main() {
     echo "  - thinkpad_acpi.conf (ThinkPad fan control)"
     echo ""
     if ask_yes_no "Copy system configuration files (requires sudo)?"; then
-        copy_system_files
+        copy_system_files || print_warning "System file configuration completed with some errors"
     else
         print_info "Skipped system file configuration"
     fi
