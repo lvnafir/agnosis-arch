@@ -789,6 +789,13 @@ install_pywal_scripts() {
 
     for script in "${scripts[@]}"; do
         local script_name=$(basename "$script")
+
+        # Skip done.sh as it's handled separately in initialize_pywal()
+        if [[ "$script_name" == "done.sh" ]]; then
+            print_info "Skipping $script_name (handled as pywal hook in initialize_pywal step)"
+            continue
+        fi
+
         local dest="$HOME/.local/bin/$script_name"
 
         # Backup existing script
@@ -903,7 +910,7 @@ initialize_pywal() {
         mkdir -p "$HOME/.config/wal"
         cp "$done_script" "$HOME/.config/wal/done.sh"
         chmod +x "$HOME/.config/wal/done.sh"
-        print_success "Installed pywal hook script"
+        print_success "Installed optimized pywal hook script with parallel execution"
     else
         print_warning "Pywal hook script not found at $done_script"
     fi
@@ -1168,8 +1175,10 @@ main() {
     echo "  - fuzzel-pywal-update (dynamic fuzzel theming)"
     echo "  - hyprland-pywal-update (dynamic hyprland theming)"
     echo "  - mako-pywal-update (dynamic notification theming)"
-    echo "  - waybar-pywal-update (dynamic waybar theming)"
-    echo "  - wallpaper (wallpaper management script)"
+    echo "  - waybar-pywal-update (dynamic waybar theming with intelligent color assignment)"
+    echo "  - waybar-color-intelligence.py (intelligent color analysis and WCAG contrast)"
+    echo "  - wallpaper (optimized wallpaper management script)"
+    echo "  - done.sh (optimized pywal hook with parallel execution)"
     echo ""
     if ask_yes_no "Install pywal integration scripts to ~/.local/bin/?"; then
         install_pywal_scripts || print_warning "Pywal script installation completed with some errors"
