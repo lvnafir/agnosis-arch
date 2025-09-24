@@ -198,10 +198,10 @@ chmod_all_scripts() {
             if [[ -f "$script" && ! -x "$script" ]]; then
                 if chmod +x "$script"; then
                     print_success "Made executable: $(basename "$script")"
-                    ((made_executable++))
+                    made_executable=$((made_executable + 1))
                 else
                     print_error "Failed to make executable: $(basename "$script")"
-                    ((failed++))
+                    failed=$((failed + 1))
                 fi
             fi
         done
@@ -222,10 +222,10 @@ chmod_all_scripts() {
             if chmod +x "$script"; then
                 local rel_path="${script#$CONFIG_DIR/}"
                 print_success "Made executable: $rel_path"
-                ((made_executable++))
+                made_executable=$((made_executable + 1))
             else
                 print_error "Failed to make executable: $script"
-                ((failed++))
+                failed=$((failed + 1))
             fi
         fi
     done
@@ -484,7 +484,7 @@ migrate_config_files() {
         # Create destination directory
         if ! mkdir -p "$dst_dir"; then
             print_error "Failed to create directory: $dst_dir"
-            ((failed++))
+            failed=$((failed + 1))
             continue
         fi
 
@@ -509,7 +509,7 @@ migrate_config_files() {
             if [[ "$dst_subdir" != "$dst_dir" ]]; then
                 if ! mkdir -p "$dst_subdir"; then
                     print_error "Failed to create subdirectory: $dst_subdir"
-                    ((failed++))
+                    failed=$((failed + 1))
                     continue
                 fi
             fi
@@ -521,7 +521,7 @@ migrate_config_files() {
                     print_info "Backed up: $(basename "$dst_file")"
                 else
                     print_error "Failed to backup: $dst_file"
-                    ((failed++))
+                    failed=$((failed + 1))
                     continue
                 fi
             fi
@@ -530,10 +530,10 @@ migrate_config_files() {
             if cp "$src_file" "$dst_file"; then
                 local dest_display="${dst_file/#$HOME/~}"
                 print_success "Migrated: $rel_path → $dest_display"
-                ((copied++))
+                copied=$((copied + 1))
             else
                 print_error "Failed to copy: $src_file → $dst_file"
-                ((failed++))
+                failed=$((failed + 1))
             fi
         done
     done
@@ -544,7 +544,7 @@ migrate_config_files() {
 
         if ! mkdir -p "$HOME/Pictures/wallpapers"; then
             print_error "Failed to create wallpapers directory"
-            ((failed++))
+            failed=$((failed + 1))
         else
             local wallpaper_files=()
             while IFS= read -r -d '' wallpaper; do
@@ -554,10 +554,10 @@ migrate_config_files() {
             for wallpaper in "${wallpaper_files[@]}"; do
                 if cp "$wallpaper" "$HOME/Pictures/wallpapers/"; then
                     print_success "Copied wallpaper: $(basename "$wallpaper")"
-                    ((copied++))
+                    copied=$((copied + 1))
                 else
                     print_error "Failed to copy wallpaper: $(basename "$wallpaper")"
-                    ((failed++))
+                    failed=$((failed + 1))
                 fi
             done
         fi
@@ -621,7 +621,7 @@ install_pywal_scripts() {
                 print_info "Backed up existing: $script_name"
             else
                 print_error "Failed to backup: $script_name"
-                ((failed++))
+                failed=$((failed + 1))
                 continue
             fi
         fi
@@ -629,17 +629,17 @@ install_pywal_scripts() {
         # Copy script
         if ! cp "$script" "$dest"; then
             print_error "Failed to copy: $script_name"
-            ((failed++))
+            failed=$((failed + 1))
             continue
         fi
 
         # Make executable
         if chmod +x "$dest"; then
             print_success "Installed: $script_name → ~/.local/bin/"
-            ((installed++))
+            installed=$((installed + 1))
         else
             print_error "Failed to make executable: $script_name"
-            ((failed++))
+            failed=$((failed + 1))
         fi
     done
 
@@ -652,7 +652,7 @@ install_pywal_scripts() {
                 print_success "Added ~/.local/bin to PATH"
             else
                 print_error "Failed to update .bashrc"
-                ((failed++))
+                failed=$((failed + 1))
             fi
         else
             print_info "~/.local/bin PATH entry already exists in ~/.bashrc"
@@ -759,7 +759,7 @@ copy_system_files() {
         fi
         sudo cp "$REPO_DIR/system/modprobe.d/nvidia.conf" "/etc/modprobe.d/"
         print_success "Copied: nvidia.conf → /etc/modprobe.d/"
-        ((copied_configs++))
+        copied_configs=$((copied_configs + 1))
     else
         print_info "Non-NVIDIA system - skipping NVIDIA modprobe.d configuration"
     fi
@@ -773,7 +773,7 @@ copy_system_files() {
         fi
         sudo cp "$REPO_DIR/system/modprobe.d/thinkpad_acpi.conf" "/etc/modprobe.d/"
         print_success "Copied: thinkpad_acpi.conf → /etc/modprobe.d/"
-        ((copied_configs++))
+        copied_configs=$((copied_configs + 1))
     else
         print_info "Non-ThinkPad system - skipping ThinkPad ACPI modprobe.d configuration"
     fi
@@ -794,7 +794,7 @@ copy_system_files() {
             fi
             sudo cp "$file" "/etc/modprobe.d/"
             print_success "Copied: $filename → /etc/modprobe.d/"
-            ((copied_configs++))
+            copied_configs=$((copied_configs + 1))
         done
     fi
 
