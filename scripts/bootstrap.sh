@@ -377,6 +377,34 @@ install_packages() {
     print_success "Hardware-aware package installation completed"
 }
 
+enable_multilib() {
+    print_header "Enabling multilib repository"
+
+    local pacman_conf="/etc/pacman.conf"
+
+    # Check if multilib is already enabled
+    if grep -q "^\[multilib\]" "$pacman_conf"; then
+        print_info "Multilib repository is already enabled"
+        return 0
+    fi
+
+    print_info "Enabling multilib repository in pacman.conf..."
+
+    # Uncomment multilib section and Include line
+    sudo sed -i '/^#\[multilib\]/,/^#Include = \/etc\/pacman.d\/mirrorlist/ {
+        s/^#\[multilib\]/[multilib]/
+        s/^#Include = \/etc\/pacman.d\/mirrorlist/Include = \/etc\/pacman.d\/mirrorlist/
+    }' "$pacman_conf"
+
+    print_success "Enabled multilib repository"
+
+    # Sync package database
+    print_info "Syncing package database with multilib..."
+    sudo pacman -Sy
+
+    print_success "Multilib repository enabled and database synchronized"
+}
+
 optimize_makepkg_conf() {
     print_header "Optimizing makepkg configuration for your hardware"
 
@@ -1083,16 +1111,17 @@ main() {
     echo ""
     echo "This script will help you set up your Arch system with:"
     echo "  1. Make all scripts executable"
-    echo "  2. Hardware-aware package installation (adaptive to your system)"
-    echo "  3. Optimize makepkg configuration for your hardware"
-    echo "  4. Install AUR packages"
-    echo "  5. Create necessary directories"
-    echo "  6. Migrate configuration files"
-    echo "  7. Install pywal integration scripts"
-    echo "  8. Initialize pywal with wallpaper and generate color schemes"
-    echo "  9. Copy hardware-specific system files (NVIDIA/ThinkPad configs only when detected)"
-    echo " 10. Enable system services"
-    echo " 11. Reload configurations"
+    echo "  2. Enable multilib repository for 32-bit applications"
+    echo "  3. Hardware-aware package installation (adaptive to your system)"
+    echo "  4. Optimize makepkg configuration for your hardware"
+    echo "  5. Install AUR packages"
+    echo "  6. Create necessary directories"
+    echo "  7. Migrate configuration files"
+    echo "  8. Install pywal integration scripts"
+    echo "  9. Initialize pywal with wallpaper and generate color schemes"
+    echo " 10. Copy hardware-specific system files (NVIDIA/ThinkPad configs only when detected)"
+    echo " 11. Enable system services"
+    echo " 12. Reload configurations"
     echo ""
     echo "Hardware detection will automatically select appropriate packages."
     echo "You will be prompted at each major step."
@@ -1110,8 +1139,21 @@ main() {
     else
         print_info "Skipped making scripts executable"
     fi
-    
-    # Step 2: Install hardware-detected packages
+
+    # Step 2: Enable multilib repository
+    echo ""
+    echo "Multilib repository enables 32-bit applications and libraries:"
+    echo "  - Steam and Windows games compatibility"
+    echo "  - Wine and Windows applications"
+    echo "  - 32-bit libraries for various applications"
+    echo ""
+    if ask_yes_no "Enable multilib repository for 32-bit application support?"; then
+        enable_multilib
+    else
+        print_info "Skipped multilib configuration"
+    fi
+
+    # Step 3: Install hardware-detected packages
     echo ""
     echo "Hardware-aware package installation:"
     echo "  - Base system packages (~47 packages)"
@@ -1126,7 +1168,7 @@ main() {
         print_info "Skipped package installation"
     fi
 
-    # Step 3: Optimize makepkg configuration
+    # Step 4: Optimize makepkg configuration
     echo ""
     echo "Hardware-optimized compilation settings:"
     echo "  - CPU-specific optimizations (march, mtune)"
@@ -1140,7 +1182,7 @@ main() {
         print_info "Skipped makepkg.conf optimization"
     fi
 
-    # Step 4: Install minimal AUR packages
+    # Step 5: Install minimal AUR packages
     echo ""
     echo "Minimal AUR packages (~2 packages vs 19 full list):"
     if [[ -f "$REPO_DIR/packages/base-aur.txt" ]]; then
@@ -1153,7 +1195,7 @@ main() {
         print_info "Skipped minimal AUR package installation"
     fi
     
-    # Step 5: Create directories
+    # Step 6: Create directories
     echo ""
     if ask_yes_no "Create necessary configuration directories?"; then
         create_directories
@@ -1161,7 +1203,7 @@ main() {
         print_info "Skipped directory creation"
     fi
     
-    # Step 6: Migrate config files
+    # Step 7: Migrate config files
     echo ""
     if ask_yes_no "Migrate configuration files (will backup existing files)?"; then
         migrate_config_files || print_warning "Config file migration completed with some errors"
@@ -1169,7 +1211,7 @@ main() {
         print_info "Skipped config file migration"
     fi
 
-    # Step 7: Install pywal scripts
+    # Step 8: Install pywal scripts
     echo ""
     echo "Pywal integration scripts:"
     echo "  - fuzzel-pywal-update (dynamic fuzzel theming)"
@@ -1186,7 +1228,7 @@ main() {
         print_info "Skipped pywal script installation"
     fi
 
-    # Step 8: Initialize pywal color schemes
+    # Step 9: Initialize pywal color schemes
     echo ""
     echo "Pywal initialization:"
     echo "  - Set up initial wallpaper (creates default if none found)"
@@ -1200,7 +1242,7 @@ main() {
         print_info "Skipped pywal initialization"
     fi
 
-    # Step 9: Copy system files
+    # Step 10: Copy system files
     echo ""
     echo "System files to copy:"
     echo "  - nvidia.conf (NVIDIA driver settings for Wayland)"
@@ -1213,7 +1255,7 @@ main() {
         print_info "Skipped system file configuration"
     fi
 
-    # Step 10: Enable services
+    # Step 11: Enable services
     echo ""
     echo "Services to enable:"
     echo "  - bluetooth (Bluetooth support)"
@@ -1229,7 +1271,7 @@ main() {
         print_info "Skipped service configuration"
     fi
     
-    # Step 11: Reload configurations
+    # Step 12: Reload configurations
     echo ""
     if ask_yes_no "Reload Hyprland configuration (if running)?"; then
         reload_configs
