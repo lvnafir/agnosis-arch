@@ -192,7 +192,7 @@ chmod_all_scripts() {
         local repo_scripts=()
         while IFS= read -r -d '' script; do
             repo_scripts+=("$script")
-        done < <(find "$REPO_DIR/scripts" -type f \( -name "*.sh" -o -name "*.py" \) -print0)
+        done < <(find "$REPO_DIR/scripts" -type f \( -name "*.sh" -o -name "*.py" -o ! -name "*.*" \) -print0)
 
         for script in "${repo_scripts[@]}"; do
             if [[ -f "$script" && ! -x "$script" ]]; then
@@ -215,7 +215,7 @@ chmod_all_scripts() {
     local config_scripts=()
     while IFS= read -r -d '' script; do
         [[ -f "$script" ]] && config_scripts+=("$script")
-    done < <(find "$CONFIG_DIR" \( -name "*.sh" -o -name "*.py" \) -type f -print0 2>/dev/null)
+    done < <(find "$CONFIG_DIR" \( -name "*.sh" -o -name "*.py" -o ! -name "*.*" \) -type f -print0 2>/dev/null)
 
     for script in "${config_scripts[@]}"; do
         if [[ ! -x "$script" ]]; then
