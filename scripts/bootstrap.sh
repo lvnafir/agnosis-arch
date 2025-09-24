@@ -1028,14 +1028,6 @@ enable_services() {
         print_success "Enabled reflector timer for mirrorlist updates"
     fi
 
-    # Zram generator for swap compression
-    if systemctl is-enabled --quiet systemd-zram-setup@zram0.service; then
-        print_info "Zram is already configured"
-    else
-        sudo systemctl daemon-reload
-        sudo systemctl enable systemd-zram-setup@zram0.service
-        print_success "Enabled zram compression"
-    fi
 
     # Pipewire and Wireplumber for audio (user services)
     for service in pipewire pipewire-pulse wireplumber; do
@@ -1208,7 +1200,6 @@ main() {
     echo "  - ly (display manager)"
     echo "  - sshd (SSH server)"
     echo "  - reflector.timer (mirrorlist updates)"
-    echo "  - zram (compressed swap)"
     echo "  - pipewire (audio)"
     echo ""
     if ask_yes_no "Enable system services?"; then
