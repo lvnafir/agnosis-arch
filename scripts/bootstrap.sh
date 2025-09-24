@@ -294,7 +294,10 @@ install_packages() {
     package_lists+=("$REPO_DIR/packages/base-pacman.txt")
 
     # Kernel choice (ask user or default to zen)
-    if ask_yes_no "Use linux-zen kernel for better performance (recommended)?"; then
+    if pacman -Qs linux-zen >/dev/null 2>&1; then
+        package_lists+=("$REPO_DIR/packages/linux-zen-pacman.txt")
+        print_info "linux-zen kernel already installed, continuing with zen packages"
+    elif ask_yes_no "Use linux-zen kernel for better performance (recommended)?"; then
         package_lists+=("$REPO_DIR/packages/linux-zen-pacman.txt")
         print_info "Selected: linux-zen kernel"
     else
