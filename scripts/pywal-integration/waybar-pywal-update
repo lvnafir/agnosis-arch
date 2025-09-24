@@ -76,23 +76,32 @@ EOF
     fi
 }
 
-# Reload waybar
-reload_waybar() {
+# Check waybar status and start if needed
+check_waybar() {
     if waybar_running; then
-        log_message "Reloading waybar..."
-        pkill -SIGUSR2 waybar || {
-            log_message "Signal reload failed, restarting waybar..."
-            pkill waybar
-            sleep 1
-            waybar &
-            disown
-        }
-        log_message "Waybar reloaded"
+        log_message "Waybar is running - colors will update automatically"
     else
-        log_message "Starting waybar..."
+        log_message "Waybar not running, starting waybar..."
         waybar &
         disown
         log_message "Waybar started"
+    fi
+}
+
+# Apply intelligent color assignments
+apply_intelligent_colors() {
+    local intelligence_script
+    intelligence_script="$HOME/.local/bin/waybar-color-intelligence.py"
+
+    if [[ -x "$intelligence_script" ]]; then
+        log_message "Applying intelligent color assignments..."
+        if "$intelligence_script"; then
+            log_message "SUCCESS: Intelligent colors applied"
+        else
+            log_message "WARNING: Intelligence script failed, using default colors"
+        fi
+    else
+        log_message "WARNING: Intelligence script not found at $intelligence_script"
     fi
 }
 
@@ -101,7 +110,8 @@ main() {
     log_message "Updating waybar with current pywal colors..."
 
     generate_waybar_colors
-    reload_waybar
+    apply_intelligent_colors
+    check_waybar
 
     log_message "Waybar pywal update complete"
 }
