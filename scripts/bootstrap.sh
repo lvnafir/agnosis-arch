@@ -377,6 +377,180 @@ install_packages() {
     print_success "Hardware-aware package installation completed"
 }
 
+optimize_makepkg_conf() {
+    print_header "Optimizing makepkg configuration for your hardware"
+
+    local makepkg_conf="/etc/makepkg.conf"
+    local makepkg_backup="/etc/makepkg.conf.backup"
+
+    # Ensure required packages are installed for hardware detection
+    local required_packages=("util-linux" "procps-ng")
+    for pkg in "${required_packages[@]}"; do
+        if ! pacman -Qs "$pkg" >/dev/null 2>&1; then
+            print_info "Installing required package: $pkg"
+            sudo pacman -S --needed --noconfirm "$pkg" || {
+                print_warning "Failed to install $pkg, continuing anyway"
+            }
+        fi
+    done
+
+    # Detect hardware
+    local cpu_count=$(nproc)
+    local cpu_vendor=$(lscpu | grep "Vendor ID" | awk '{print $3}' 2>/dev/null || echo "unknown")
+    local cpu_flags=$(lscpu | grep "Flags" | cut -d: -f2 | xargs 2>/dev/null || echo "")
+    local cpu_model=$(lscpu | grep "Model name" | cut -d: -f2 | xargs 2>/dev/null || echo "unknown")
+    local memory_gb=$(($(grep MemTotal /proc/meminfo | awk '{print $2}') / 1024 / 1024))
+
+    print_info "Detected: $cpu_model ($cpu_count cores, ${memory_gb}GB RAM)"
+
+    # Determine optimal compile flags based on hardware
+    local march=""
+    local mtune=""
+    local extra_flags=""
+
+    case "$cpu_vendor" in
+        "GenuineIntel")
+            if echo "$cpu_flags" | grep -q "avx512"; then
+                march="skylake-avx512"
+                mtune="skylake-avx512"
+            elif echo "$cpu_flags" | grep -q "avx2"; then
+                if echo "$cpu_model" | grep -qi "haswell"; then
+                    march="haswell"
+                    mtune="haswell"
+                elif echo "$cpu_model" | grep -qi "broadwell"; then
+                    march="broadwell"
+                    mtune="broadwell"
+                elif echo "$cpu_model" | grep -qi "skylake"; then
+                    march="skylake"
+                    mtune="skylake"
+                else
+                    march="x86-64-v3"
+                    mtune="generic"
+                fi
+            elif echo "$cpu_flags" | grep -q "sse4_2"; then
+                march="x86-64-v2"
+                mtune="generic"
+            else
+                march="x86-64"
+                mtune="generic"
+            fi
+            ;;
+        "AuthenticAMD")
+            if echo "$cpu_flags" | grep -q "avx512"; then
+                march="znver3"
+                mtune="znver3"
+            elif echo "$cpu_flags" | grep -q "avx2"; then
+                if echo "$cpu_model" | grep -qi "zen3\|5950x\|5900x\|5800x\|5600x"; then
+                    march="znver3"
+                    mtune="znver3"
+                elif echo "$cpu_model" | grep -qi "zen2\|3950x\|3900x\|3800x\|3700x\|3600x"; then
+                    march="znver2"
+                    mtune="znver2"
+                elif echo "$cpu_model" | grep -qi "zen\|ryzen"; then
+                    march="znver1"
+                    mtune="znver1"
+                else
+                    march="x86-64-v3"
+                    mtune="generic"
+                fi
+            elif echo "$cpu_flags" | grep -q "sse4_2"; then
+                march="x86-64-v2"
+                mtune="generic"
+            else
+                march="x86-64"
+                mtune="generic"
+            fi
+            ;;
+        *)
+            if echo "$cpu_flags" | grep -q "avx2"; then
+                march="x86-64-v3"
+                mtune="generic"
+            elif echo "$cpu_flags" | grep -q "sse4_2"; then
+                march="x86-64-v2"
+                mtune="generic"
+            else
+                march="x86-64"
+                mtune="generic"
+            fi
+            ;;
+    esac
+
+    # Add CPU-specific optimizations
+    if echo "$cpu_flags" | grep -q "bmi2"; then
+        extra_flags="$extra_flags -mbmi2"
+    fi
+    if echo "$cpu_flags" | grep -q "lzcnt"; then
+        extra_flags="$extra_flags -mlzcnt"
+    fi
+
+    # Calculate optimal job count (memory-aware)
+    local memory_limited_jobs=$((memory_gb * 2 / 3))
+    local optimal_jobs=$((cpu_count < memory_limited_jobs ? cpu_count : memory_limited_jobs))
+
+    # Bounds checking
+    if [ $optimal_jobs -lt 1 ]; then
+        optimal_jobs=1
+    elif [ $optimal_jobs -gt 16 ]; then
+        optimal_jobs=16
+    fi
+
+    print_info "Optimization settings:"
+    print_info "  Architecture: $march"
+    print_info "  Tuning: $mtune"
+    print_info "  Extra flags:$extra_flags"
+    print_info "  Parallel jobs: $optimal_jobs"
+
+    # Backup existing makepkg.conf
+    if [ -f "$makepkg_conf" ]; then
+        sudo cp "$makepkg_conf" "$makepkg_backup"
+        print_info "Backed up existing makepkg.conf"
+    fi
+
+    # Create optimized CFLAGS
+    local base_cflags="-O2 -pipe -fno-plt -fexceptions"
+    local security_flags="-Wp,-D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security -fstack-clash-protection -fcf-protection"
+    local optimized_cflags="$base_cflags -march=$march -mtune=$mtune$extra_flags $security_flags"
+
+    # Update makepkg.conf with optimizations
+    if [ -f "$makepkg_conf" ]; then
+        # Update MAKEFLAGS
+        if grep -q "^MAKEFLAGS=" "$makepkg_conf"; then
+            sudo sed -i "s/^MAKEFLAGS=.*/MAKEFLAGS=\"-j$optimal_jobs\"/" "$makepkg_conf"
+        else
+            echo "MAKEFLAGS=\"-j$optimal_jobs\"" | sudo tee -a "$makepkg_conf" >/dev/null
+        fi
+
+        # Update CFLAGS (handle potential multi-line)
+        if grep -q "^CFLAGS=" "$makepkg_conf"; then
+            sudo sed -i "/^CFLAGS=/c\\CFLAGS=\"$optimized_cflags\"" "$makepkg_conf"
+        else
+            echo "CFLAGS=\"$optimized_cflags\"" | sudo tee -a "$makepkg_conf" >/dev/null
+        fi
+
+        # Update CXXFLAGS
+        if grep -q "^CXXFLAGS=" "$makepkg_conf"; then
+            sudo sed -i 's/^CXXFLAGS=.*/CXXFLAGS="$CFLAGS -Wp,-D_GLIBCXX_ASSERTIONS"/' "$makepkg_conf"
+        else
+            echo 'CXXFLAGS="$CFLAGS -Wp,-D_GLIBCXX_ASSERTIONS"' | sudo tee -a "$makepkg_conf" >/dev/null
+        fi
+
+        # Add LTO flags if not present
+        if ! grep -q "^LTOFLAGS=" "$makepkg_conf"; then
+            echo 'LTOFLAGS="-flto=auto"' | sudo tee -a "$makepkg_conf" >/dev/null
+        fi
+
+        # Enable ccache if available
+        if command -v ccache &> /dev/null && grep -q "^BUILDENV=" "$makepkg_conf"; then
+            sudo sed -i 's/!ccache/ccache/' "$makepkg_conf"
+            print_info "Enabled ccache for faster rebuilds"
+        fi
+
+        print_success "makepkg.conf optimized for your hardware"
+    else
+        print_warning "makepkg.conf not found, optimization skipped"
+    fi
+}
+
 install_aur_packages() {
     print_header "Installing AUR packages"
 
@@ -899,14 +1073,15 @@ main() {
     echo "This script will help you set up your Arch system with:"
     echo "  1. Make all scripts executable"
     echo "  2. Hardware-aware package installation (adaptive to your system)"
-    echo "  3. Install AUR packages"
-    echo "  4. Create necessary directories"
-    echo "  5. Migrate configuration files"
-    echo "  6. Install pywal integration scripts"
-    echo "  7. Initialize pywal with wallpaper and generate color schemes"
-    echo "  8. Copy hardware-specific system files (NVIDIA/ThinkPad configs only when detected)"
-    echo "  9. Enable system services"
-    echo " 10. Reload configurations"
+    echo "  3. Optimize makepkg configuration for your hardware"
+    echo "  4. Install AUR packages"
+    echo "  5. Create necessary directories"
+    echo "  6. Migrate configuration files"
+    echo "  7. Install pywal integration scripts"
+    echo "  8. Initialize pywal with wallpaper and generate color schemes"
+    echo "  9. Copy hardware-specific system files (NVIDIA/ThinkPad configs only when detected)"
+    echo " 10. Enable system services"
+    echo " 11. Reload configurations"
     echo ""
     echo "Hardware detection will automatically select appropriate packages."
     echo "You will be prompted at each major step."
@@ -940,7 +1115,21 @@ main() {
         print_info "Skipped package installation"
     fi
 
-    # Step 3: Install minimal AUR packages
+    # Step 3: Optimize makepkg configuration
+    echo ""
+    echo "Hardware-optimized compilation settings:"
+    echo "  - CPU-specific optimizations (march, mtune)"
+    echo "  - Memory-aware parallel compilation"
+    echo "  - Security-hardened flags"
+    echo "  - LTO and ccache support"
+    echo ""
+    if ask_yes_no "Optimize makepkg.conf for your hardware?"; then
+        optimize_makepkg_conf
+    else
+        print_info "Skipped makepkg.conf optimization"
+    fi
+
+    # Step 4: Install minimal AUR packages
     echo ""
     echo "Minimal AUR packages (~2 packages vs 19 full list):"
     if [[ -f "$REPO_DIR/packages/base-aur.txt" ]]; then
@@ -953,7 +1142,7 @@ main() {
         print_info "Skipped minimal AUR package installation"
     fi
     
-    # Step 4: Create directories
+    # Step 5: Create directories
     echo ""
     if ask_yes_no "Create necessary configuration directories?"; then
         create_directories
@@ -961,7 +1150,7 @@ main() {
         print_info "Skipped directory creation"
     fi
     
-    # Step 5: Migrate config files
+    # Step 6: Migrate config files
     echo ""
     if ask_yes_no "Migrate configuration files (will backup existing files)?"; then
         migrate_config_files || print_warning "Config file migration completed with some errors"
@@ -969,7 +1158,7 @@ main() {
         print_info "Skipped config file migration"
     fi
 
-    # Step 6: Install pywal scripts
+    # Step 7: Install pywal scripts
     echo ""
     echo "Pywal integration scripts:"
     echo "  - fuzzel-pywal-update (dynamic fuzzel theming)"
@@ -984,7 +1173,7 @@ main() {
         print_info "Skipped pywal script installation"
     fi
 
-    # Step 7: Initialize pywal color schemes
+    # Step 8: Initialize pywal color schemes
     echo ""
     echo "Pywal initialization:"
     echo "  - Set up initial wallpaper (creates default if none found)"
@@ -998,7 +1187,7 @@ main() {
         print_info "Skipped pywal initialization"
     fi
 
-    # Step 8: Copy system files
+    # Step 9: Copy system files
     echo ""
     echo "System files to copy:"
     echo "  - nvidia.conf (NVIDIA driver settings for Wayland)"
@@ -1011,7 +1200,7 @@ main() {
         print_info "Skipped system file configuration"
     fi
 
-    # Step 9: Enable services
+    # Step 10: Enable services
     echo ""
     echo "Services to enable:"
     echo "  - bluetooth (Bluetooth support)"
@@ -1028,7 +1217,7 @@ main() {
         print_info "Skipped service configuration"
     fi
     
-    # Step 10: Reload configurations
+    # Step 11: Reload configurations
     echo ""
     if ask_yes_no "Reload Hyprland configuration (if running)?"; then
         reload_configs
