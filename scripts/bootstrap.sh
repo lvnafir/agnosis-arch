@@ -18,7 +18,7 @@ if [ -t 1 ] && command -v tput &> /dev/null && tput colors &> /dev/null && [ "$(
     BLUE='\033[0;34m'
     NC='\033[0m'
 else
-    # No color in TTY
+    # No color support detected
     RED=''
     GREEN=''
     YELLOW=''
@@ -45,10 +45,14 @@ print_info() {
     echo "[INFO] $1"
 }
 
+print_warning() {
+    echo "[WARNING] $1"
+}
+
 ask_yes_no() {
     local prompt="$1"
     local response
-    
+
     while true; do
         echo -n "$prompt (y/n): "
         read -r response
@@ -60,35 +64,176 @@ ask_yes_no() {
     done
 }
 
+safe_parse_hw_info() {
+    local hw_info="$1"
+    local allowed_vars="GPU_TYPE CPU_TYPE CPU_VENDOR LAPTOP_BRAND SYSTEM_TYPE PLATFORM GPU_DRIVER COUNTRY FEATURES"
+
+    # Validate input is not empty
+    [[ -n "$hw_info" ]] || {
+        print_error "Hardware info is empty"
+        return 1
+    }
+
+    # Parse each line safely
+    while IFS= read -r line; do
+        # Skip empty lines and comments
+        [[ -n "$line" && ! "$line" =~ ^[[:space:]]*# ]] || continue
+
+        # Validate format: VAR="value" only
+        if [[ "$line" =~ ^([A-Z_]+)=\"([^\"]+)\"$ ]]; then
+            local var_name="${BASH_REMATCH[1]}"
+            local var_value="${BASH_REMATCH[2]}"
+
+            # Check if variable is in allowed list
+            if [[ " $allowed_vars " =~ " $var_name " ]]; then
+                # Sanitize value (remove dangerous characters)
+                var_value="${var_value//[\$\`\\]/}"
+                declare -g "$var_name=$var_value"
+            else
+                print_info "Skipping unknown variable: $var_name"
+            fi
+        else
+            print_info "Skipping invalid line format: $line"
+        fi
+    done <<< "$hw_info"
+}
+
+safe_load_hw_file() {
+    local hw_file="$1"
+    local allowed_vars="GPU_TYPE CPU_TYPE CPU_VENDOR LAPTOP_BRAND SYSTEM_TYPE PLATFORM GPU_DRIVER COUNTRY FEATURES"
+
+    # Validate file exists and is readable
+    [[ -f "$hw_file" && -r "$hw_file" ]] || {
+        print_error "Hardware file not found or not readable: $hw_file"
+        return 1
+    }
+
+    # Check file size (prevent reading huge files)
+    local file_size=$(stat -c%s "$hw_file" 2>/dev/null || echo 0)
+    if [[ $file_size -gt 1024 ]]; then
+        print_error "Hardware file too large (${file_size} bytes): $hw_file"
+        return 1
+    fi
+
+    # Read and validate file content
+    local content
+    content=$(cat "$hw_file") || {
+        print_error "Failed to read hardware file: $hw_file"
+        return 1
+    }
+
+    # Validate content format (only safe variable assignments)
+    while IFS= read -r line; do
+        # Skip empty lines and comments
+        [[ -n "$line" && ! "$line" =~ ^[[:space:]]*# ]] || continue
+
+        # Check for dangerous patterns
+        if [[ "$line" =~ [\$\`\(\)\|\&\;\<\>] ]]; then
+            print_error "Hardware file contains unsafe characters: $hw_file"
+            return 1
+        fi
+
+        # Validate format: VAR="value" only
+        if ! [[ "$line" =~ ^[A-Z_]+=\"[^\"]*\"$ ]]; then
+            print_error "Hardware file has invalid format: $hw_file"
+            return 1
+        fi
+    done <<< "$content"
+
+    # Parse variables safely
+    while IFS= read -r line; do
+        # Skip empty lines and comments
+        [[ -n "$line" && ! "$line" =~ ^[[:space:]]*# ]] || continue
+
+        if [[ "$line" =~ ^([A-Z_]+)=\"([^\"]+)\"$ ]]; then
+            local var_name="${BASH_REMATCH[1]}"
+            local var_value="${BASH_REMATCH[2]}"
+
+            # Check if variable is in allowed list
+            if [[ " $allowed_vars " =~ " $var_name " ]]; then
+                # Additional sanitization
+                var_value="${var_value//[\$\`\\]/}"
+                declare -g "$var_name=$var_value"
+                print_info "Loaded: $var_name=$var_value"
+            else
+                print_info "Skipping unknown variable: $var_name"
+            fi
+        fi
+    done <<< "$content"
+
+    return 0
+}
+
 chmod_all_scripts() {
     print_header "Making all scripts executable"
-    
-    find "$REPO_DIR/scripts" -type f \( -name "*.sh" -o ! -name "*.*" \) -print0 | while IFS= read -r -d '' script; do
-        if [[ -f "$script" && ! -x "$script" ]]; then
-            chmod +x "$script"
-            print_success "Made executable: $(basename "$script")"
+
+    # Validate required paths
+    [[ -d "$REPO_DIR" ]] || {
+        print_error "Repository directory not found: $REPO_DIR"
+        return 1
+    }
+
+    [[ -d "$CONFIG_DIR" ]] || {
+        print_error "Configuration directory not found: $CONFIG_DIR"
+        return 1
+    }
+
+    local made_executable=0 failed=0
+
+    # Process repository scripts using arrays instead of subshells
+    if [[ -d "$REPO_DIR/scripts" ]]; then
+        print_info "Processing repository scripts..."
+
+        local repo_scripts=()
+        while IFS= read -r -d '' script; do
+            repo_scripts+=("$script")
+        done < <(find "$REPO_DIR/scripts" -type f \( -name "*.sh" -o -name "*.py" \) -print0)
+
+        for script in "${repo_scripts[@]}"; do
+            if [[ -f "$script" && ! -x "$script" ]]; then
+                if chmod +x "$script"; then
+                    print_success "Made executable: $(basename "$script")"
+                    ((made_executable++))
+                else
+                    print_error "Failed to make executable: $(basename "$script")"
+                    ((failed++))
+                fi
+            fi
+        done
+    else
+        print_info "No scripts directory found in repository"
+    fi
+
+    # Process config scripts dynamically
+    print_info "Processing configuration scripts..."
+
+    local config_scripts=()
+    while IFS= read -r -d '' script; do
+        [[ -f "$script" ]] && config_scripts+=("$script")
+    done < <(find "$CONFIG_DIR" \( -name "*.sh" -o -name "*.py" \) -type f -print0 2>/dev/null)
+
+    for script in "${config_scripts[@]}"; do
+        if [[ ! -x "$script" ]]; then
+            if chmod +x "$script"; then
+                local rel_path="${script#$CONFIG_DIR/}"
+                print_success "Made executable: $rel_path"
+                ((made_executable++))
+            else
+                print_error "Failed to make executable: $script"
+                ((failed++))
+            fi
         fi
     done
-    
-    if [[ -f "$CONFIG_DIR/waybar/powermenu-fuzzel.sh" ]]; then
-        chmod +x "$CONFIG_DIR/waybar/powermenu-fuzzel.sh"
-        print_success "Made executable: waybar/powermenu-fuzzel.sh"
-    fi
-    
-    if [[ -f "$CONFIG_DIR/waybar/wifimenu-complete-refactored.sh" ]]; then
-        chmod +x "$CONFIG_DIR/waybar/wifimenu-complete-refactored.sh"
-        print_success "Made executable: waybar/wifimenu-complete-refactored.sh"
+
+    # Summary
+    print_info "Script permissions: $made_executable made executable, $failed failed"
+
+    if [[ $failed -gt 0 ]]; then
+        print_error "Some scripts failed to become executable"
+        return 1
     fi
 
-    if [[ -f "$CONFIG_DIR/waybar/appmenu-fuzzel.sh" ]]; then
-        chmod +x "$CONFIG_DIR/waybar/appmenu-fuzzel.sh"
-        print_success "Made executable: waybar/appmenu-fuzzel.sh"
-    fi
-
-    if [[ -f "$CONFIG_DIR/hypr/touchpad-config-toggle.sh" ]]; then
-        chmod +x "$CONFIG_DIR/hypr/touchpad-config-toggle.sh"
-        print_success "Made executable: hypr/touchpad-config-toggle.sh"
-    fi
+    return 0
 }
 
 install_packages() {
@@ -111,7 +256,10 @@ install_packages() {
 
     # Source hardware detection
     local hw_info=$("$REPO_DIR/scripts/detect-hardware.sh" --env)
-    eval "$hw_info"
+    if ! safe_parse_hw_info "$hw_info"; then
+        print_error "Failed to parse hardware detection results"
+        return 1
+    fi
 
     # Save hardware detection results for later use
     echo "$hw_info" > /tmp/hardware-detection.env
@@ -122,9 +270,16 @@ install_packages() {
     fi
 
     # Update mirrors with detected country
-    print_info "Updating package mirrors for $COUNTRY..."
-    sudo reflector --country "$COUNTRY" --age 12 --protocol https --sort rate --connection-timeout 2 --save /etc/pacman.d/mirrorlist
-    print_success "Updated package mirrors"
+    if [[ -n "$COUNTRY" ]]; then
+        print_info "Updating package mirrors for $COUNTRY..."
+        if sudo reflector --country "$COUNTRY" --age 12 --protocol https --sort rate --connection-timeout 2 --save /etc/pacman.d/mirrorlist; then
+            print_success "Updated package mirrors"
+        else
+            print_warning "Failed to update mirrors for $COUNTRY, using default mirrors"
+        fi
+    else
+        print_info "No country detected, using default mirrors"
+    fi
 
     # Collect package lists to install
     local package_lists=()
@@ -185,7 +340,7 @@ install_packages() {
     esac
 
     # Vendor-specific packages
-    case "$VENDOR" in
+    case "$LAPTOP_BRAND" in
         "thinkpad")
             package_lists+=("$REPO_DIR/packages/thinkpad-pacman.txt")
             print_info "Adding ThinkPad packages"
@@ -292,108 +447,299 @@ create_directories() {
 
 migrate_config_files() {
     print_header "Migrating configuration files"
-    
-    declare -A files=(
-        ["$REPO_DIR/config/hypr/hyprland.conf"]="$CONFIG_DIR/hypr/hyprland.conf"
-        ["$REPO_DIR/config/hypr/hyprlock.conf"]="$CONFIG_DIR/hypr/hyprlock.conf"
-        ["$REPO_DIR/config/hypr/hyprpaper.conf"]="$CONFIG_DIR/hypr/hyprpaper.conf"
-        ["$REPO_DIR/config/hypr/colors.conf"]="$CONFIG_DIR/hypr/colors.conf"
-        ["$REPO_DIR/config/hypr/pywal-decorations.conf"]="$CONFIG_DIR/hypr/pywal-decorations.conf"
-        ["$REPO_DIR/config/hypr/touchpad-config-toggle.sh"]="$CONFIG_DIR/hypr/touchpad-config-toggle.sh"
-        ["$REPO_DIR/config/waybar/config"]="$CONFIG_DIR/waybar/config"
-        ["$REPO_DIR/config/waybar/style.css"]="$CONFIG_DIR/waybar/style.css"
-        ["$REPO_DIR/config/waybar/powermenu-fuzzel.sh"]="$CONFIG_DIR/waybar/powermenu-fuzzel.sh"
-        ["$REPO_DIR/config/waybar/wifimenu-complete-refactored.sh"]="$CONFIG_DIR/waybar/wifimenu-complete-refactored.sh"
-        ["$REPO_DIR/config/waybar/appmenu-fuzzel.sh"]="$CONFIG_DIR/waybar/appmenu-fuzzel.sh"
-        ["$REPO_DIR/config/waybar/setup_cava.py"]="$CONFIG_DIR/waybar/setup_cava.py"
-        ["$REPO_DIR/config/fuzzel/fuzzel.ini"]="$CONFIG_DIR/fuzzel/fuzzel.ini"
-        ["$REPO_DIR/config/mako/config"]="$CONFIG_DIR/mako/config"
-        ["$REPO_DIR/config/ranger/rc.conf"]="$CONFIG_DIR/ranger/rc.conf"
-        ["$REPO_DIR/config/ranger/rifle.conf"]="$CONFIG_DIR/ranger/rifle.conf"
-        ["$REPO_DIR/config/ranger/scope.sh"]="$CONFIG_DIR/ranger/scope.sh"
-        ["$REPO_DIR/config/ranger/commands.py"]="$CONFIG_DIR/ranger/commands.py"
-        ["$REPO_DIR/config/ranger/commands_full.py"]="$CONFIG_DIR/ranger/commands_full.py"
-        ["$REPO_DIR/config/wal/templates/colors-waybar.css"]="$CONFIG_DIR/wal/templates/colors-waybar.css"
-    )
-    
-    for src in "${!files[@]}"; do
-        dest="${files[$src]}"
-        if [[ -f "$src" ]]; then
-            if [[ -f "$dest" ]]; then
-                print_info "Backing up existing: $(basename "$dest")"
-                cp "$dest" "$dest.bak.$(date +%Y%m%d_%H%M%S)"
-            fi
-            cp "$src" "$dest"
-            dest_display="${dest/#$HOME/~}"
-            print_success "Migrated: $(basename "$src") → $(dirname "$dest_display")"
-        else
-            print_error "Source file not found: $src"
+
+    # Validate paths
+    [[ -d "$REPO_DIR/config" ]] || {
+        print_error "Repository config directory not found: $REPO_DIR/config"
+        return 1
+    }
+
+    local copied=0 skipped=0 failed=0
+
+    # Dynamic config directory discovery
+    local config_dirs=()
+    while IFS= read -r -d '' dir; do
+        [[ -d "$dir" ]] && config_dirs+=("$dir")
+    done < <(find "$REPO_DIR/config" -mindepth 1 -maxdepth 1 -type d -print0)
+
+    if [[ ${#config_dirs[@]} -eq 0 ]]; then
+        print_error "No config directories found in $REPO_DIR/config"
+        return 1
+    fi
+
+    print_info "Found ${#config_dirs[@]} config directories to process"
+
+    # Process each config directory
+    for src_dir in "${config_dirs[@]}"; do
+        local dir_name=$(basename "$src_dir")
+        local dst_dir="$CONFIG_DIR/$dir_name"
+
+        print_info "Processing $dir_name directory..."
+
+        # Create destination directory
+        if ! mkdir -p "$dst_dir"; then
+            print_error "Failed to create directory: $dst_dir"
+            ((failed++))
+            continue
         fi
-    done
-    
-    # Copy wallpapers
-    if [[ -d "$REPO_DIR/wallpapers" ]]; then
-        print_info "Copying wallpapers..."
-        # Ensure wallpapers directory exists
-        mkdir -p "$HOME/Pictures/wallpapers"
-        for wallpaper in "$REPO_DIR/wallpapers"/*; do
-            if [[ -f "$wallpaper" ]]; then
-                cp "$wallpaper" "$HOME/Pictures/wallpapers/"
-                print_success "Copied wallpaper: $(basename "$wallpaper")"
+
+        # Find and copy all files in this directory
+        local files=()
+        while IFS= read -r -d '' file; do
+            files+=("$file")
+        done < <(find "$src_dir" -type f -print0)
+
+        if [[ ${#files[@]} -eq 0 ]]; then
+            print_info "No files found in $dir_name directory"
+            continue
+        fi
+
+        # Copy each file
+        for src_file in "${files[@]}"; do
+            local rel_path="${src_file#$src_dir/}"
+            local dst_file="$dst_dir/$rel_path"
+
+            # Create subdirectories if needed
+            local dst_subdir=$(dirname "$dst_file")
+            if [[ "$dst_subdir" != "$dst_dir" ]]; then
+                if ! mkdir -p "$dst_subdir"; then
+                    print_error "Failed to create subdirectory: $dst_subdir"
+                    ((failed++))
+                    continue
+                fi
+            fi
+
+            # Backup existing file
+            if [[ -f "$dst_file" ]]; then
+                local backup="$dst_file.bak.$(date +%Y%m%d_%H%M%S)"
+                if cp "$dst_file" "$backup"; then
+                    print_info "Backed up: $(basename "$dst_file")"
+                else
+                    print_error "Failed to backup: $dst_file"
+                    ((failed++))
+                    continue
+                fi
+            fi
+
+            # Copy the file
+            if cp "$src_file" "$dst_file"; then
+                local dest_display="${dst_file/#$HOME/~}"
+                print_success "Migrated: $rel_path → $dest_display"
+                ((copied++))
+            else
+                print_error "Failed to copy: $src_file → $dst_file"
+                ((failed++))
             fi
         done
+    done
+
+    # Copy wallpapers with error handling
+    if [[ -d "$REPO_DIR/wallpapers" ]]; then
+        print_info "Processing wallpapers..."
+
+        if ! mkdir -p "$HOME/Pictures/wallpapers"; then
+            print_error "Failed to create wallpapers directory"
+            ((failed++))
+        else
+            local wallpaper_files=()
+            while IFS= read -r -d '' wallpaper; do
+                [[ -f "$wallpaper" ]] && wallpaper_files+=("$wallpaper")
+            done < <(find "$REPO_DIR/wallpapers" -maxdepth 1 -type f -print0)
+
+            for wallpaper in "${wallpaper_files[@]}"; do
+                if cp "$wallpaper" "$HOME/Pictures/wallpapers/"; then
+                    print_success "Copied wallpaper: $(basename "$wallpaper")"
+                    ((copied++))
+                else
+                    print_error "Failed to copy wallpaper: $(basename "$wallpaper")"
+                    ((failed++))
+                fi
+            done
+        fi
+    else
+        print_info "No wallpapers directory found, skipping wallpaper migration"
     fi
+
+    # Migration summary
+    print_info "Migration complete: $copied copied, $skipped skipped, $failed failed"
+
+    if [[ $failed -gt 0 ]]; then
+        print_error "Some files failed to migrate - check the errors above"
+        return 1
+    fi
+
+    return 0
 }
 
 install_pywal_scripts() {
     print_header "Installing pywal integration scripts"
 
+    # Create .local/bin directory with error handling
     if [[ ! -d "$HOME/.local/bin" ]]; then
-        mkdir -p "$HOME/.local/bin"
-        print_success "Created ~/.local/bin directory"
+        if mkdir -p "$HOME/.local/bin"; then
+            print_success "Created ~/.local/bin directory"
+        else
+            print_error "Failed to create ~/.local/bin directory"
+            return 1
+        fi
     fi
 
-    if [[ -d "$REPO_DIR/scripts/pywal-integration" ]]; then
-        print_info "Copying pywal integration scripts..."
-        # Use find to safely handle filenames with spaces
-        find "$REPO_DIR/scripts/pywal-integration" -type f -print0 | while IFS= read -r -d '' script; do
-            script_name=$(basename "$script")
-            if [[ -f "$HOME/.local/bin/$script_name" ]]; then
-                print_info "Backing up existing: ~/.local/bin/$script_name"
-                cp "$HOME/.local/bin/$script_name" "$HOME/.local/bin/$script_name.bak.$(date +%Y%m%d_%H%M%S)"
-            fi
-            cp "$script" "$HOME/.local/bin/"
-            chmod +x "$HOME/.local/bin/$script_name"
-            print_success "Installed: $script_name → ~/.local/bin/"
-        done
+    # Validate pywal integration directory exists
+    if [[ ! -d "$REPO_DIR/scripts/pywal-integration" ]]; then
+        print_info "No pywal integration scripts directory found"
+        return 0
+    fi
 
-        # Ensure ~/.local/bin is in PATH
-        if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
-            # Check if the line already exists in .bashrc
-            if ! grep -Fxq 'export PATH="$HOME/.local/bin:$PATH"' "$HOME/.bashrc" 2>/dev/null; then
-                print_info "Adding ~/.local/bin to PATH in ~/.bashrc"
-                echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
+    local installed=0 failed=0
+
+    print_info "Installing pywal integration scripts..."
+
+    # Use arrays instead of subshells to fix variable persistence
+    local scripts=()
+    while IFS= read -r -d '' script; do
+        [[ -f "$script" ]] && scripts+=("$script")
+    done < <(find "$REPO_DIR/scripts/pywal-integration" -type f -print0)
+
+    if [[ ${#scripts[@]} -eq 0 ]]; then
+        print_info "No scripts found in pywal-integration directory"
+        return 0
+    fi
+
+    for script in "${scripts[@]}"; do
+        local script_name=$(basename "$script")
+        local dest="$HOME/.local/bin/$script_name"
+
+        # Backup existing script
+        if [[ -f "$dest" ]]; then
+            local backup="$dest.bak.$(date +%Y%m%d_%H%M%S)"
+            if cp "$dest" "$backup"; then
+                print_info "Backed up existing: $script_name"
+            else
+                print_error "Failed to backup: $script_name"
+                ((failed++))
+                continue
+            fi
+        fi
+
+        # Copy script
+        if ! cp "$script" "$dest"; then
+            print_error "Failed to copy: $script_name"
+            ((failed++))
+            continue
+        fi
+
+        # Make executable
+        if chmod +x "$dest"; then
+            print_success "Installed: $script_name → ~/.local/bin/"
+            ((installed++))
+        else
+            print_error "Failed to make executable: $script_name"
+            ((failed++))
+        fi
+    done
+
+    # Ensure ~/.local/bin is in PATH
+    if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
+        # Check if the line already exists in .bashrc
+        if ! grep -Fxq 'export PATH="$HOME/.local/bin:$PATH"' "$HOME/.bashrc" 2>/dev/null; then
+            print_info "Adding ~/.local/bin to PATH in ~/.bashrc"
+            if echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"; then
                 print_success "Added ~/.local/bin to PATH"
             else
-                print_info "~/.local/bin PATH entry already exists in ~/.bashrc"
+                print_error "Failed to update .bashrc"
+                ((failed++))
             fi
         else
-            print_info "~/.local/bin already in current PATH"
+            print_info "~/.local/bin PATH entry already exists in ~/.bashrc"
         fi
     else
-        print_info "No pywal integration scripts to install"
+        print_info "~/.local/bin already in current PATH"
+    fi
+
+    # Summary
+    print_info "Installation complete: $installed installed, $failed failed"
+
+    if [[ $failed -gt 0 ]]; then
+        print_error "Some pywal scripts failed to install"
+        return 1
+    fi
+
+    return 0
+}
+
+initialize_pywal() {
+    print_header "Initializing pywal theme system"
+
+    # Check if pywal is available (should be installed via AUR packages)
+    if ! command -v wal &> /dev/null; then
+        print_error "pywal not found. Make sure python-pywal16 was installed from AUR."
+        return 1
+    fi
+
+    # Find a wallpaper to initialize pywal with
+    local default_wallpaper=""
+    local wallpaper_dirs=(
+        "$HOME/Pictures/wallpapers"
+        "$HOME/Pictures"
+        "$REPO_DIR/config/wallpapers"
+        "/usr/share/pixmaps"
+        "/usr/share/backgrounds"
+    )
+
+    # Look for wallpapers in common directories
+    for dir in "${wallpaper_dirs[@]}"; do
+        if [[ -d "$dir" ]]; then
+            # Find first suitable wallpaper (common image formats)
+            default_wallpaper=$(find "$dir" -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" \) | head -1)
+            if [[ -n "$default_wallpaper" ]]; then
+                break
+            fi
+        fi
+    done
+
+    # If no wallpaper found, create a simple solid color wallpaper
+    if [[ -z "$default_wallpaper" ]]; then
+        print_info "No wallpaper found, creating default solid color wallpaper..."
+        mkdir -p "$HOME/Pictures/wallpapers"
+        default_wallpaper="$HOME/Pictures/wallpapers/default.png"
+
+        # Create a simple solid color wallpaper using ImageMagick if available
+        if command -v convert &> /dev/null; then
+            convert -size 1920x1080 xc:'#2d3748' "$default_wallpaper"
+            print_success "Created default wallpaper: $default_wallpaper"
+        else
+            print_error "No wallpaper found and ImageMagick not available to create one."
+            print_info "Please install ImageMagick or place a wallpaper in ~/Pictures/wallpapers/"
+            return 1
+        fi
+    fi
+
+    # Initialize pywal with the found/created wallpaper
+    print_info "Initializing pywal with wallpaper: $default_wallpaper"
+    wal -i "$default_wallpaper" -n
+
+    # Verify pywal initialization
+    if [[ -f "$HOME/.cache/wal/colors.json" ]]; then
+        print_success "Pywal initialized successfully"
+
+        # Update waybar colors if the script exists
+        if [[ -x "$HOME/.local/bin/waybar-pywal-update" ]]; then
+            print_info "Updating waybar with pywal colors..."
+            "$HOME/.local/bin/waybar-pywal-update"
+        fi
+    else
+        print_error "Pywal initialization failed"
+        return 1
     fi
 }
 
 copy_system_files() {
     print_header "Copying hardware-specific system configuration files"
 
-    # Load hardware detection results
+    # Load hardware detection results safely
     local hw_file="/tmp/hardware-detection.env"
-    if [[ -f "$hw_file" ]]; then
-        source "$hw_file"
-    else
-        print_error "Hardware detection results not found. Run hardware detection first."
+    if ! safe_load_hw_file "$hw_file"; then
+        print_error "Failed to load hardware detection results safely"
         return 1
     fi
 
@@ -414,7 +760,7 @@ copy_system_files() {
     fi
 
     # Copy ThinkPad modprobe.d config only for ThinkPad systems
-    if [[ "$VENDOR" == "thinkpad" ]] && [[ -f "$REPO_DIR/system/modprobe.d/thinkpad_acpi.conf" ]]; then
+    if [[ "$LAPTOP_BRAND" == "thinkpad" ]] && [[ -f "$REPO_DIR/system/modprobe.d/thinkpad_acpi.conf" ]]; then
         print_info "ThinkPad detected - copying ThinkPad ACPI modprobe.d configuration..."
         if [[ -f "/etc/modprobe.d/thinkpad_acpi.conf" ]]; then
             print_info "Backing up existing: /etc/modprobe.d/thinkpad_acpi.conf"
@@ -429,8 +775,13 @@ copy_system_files() {
 
     # Copy other universal modprobe.d configs (blacklist-ucsi.conf, etc.)
     if [[ -d "$REPO_DIR/system/modprobe.d" ]]; then
-        find "$REPO_DIR/system/modprobe.d" -name "*.conf" -type f ! -name "nvidia.conf" ! -name "thinkpad_acpi.conf" -print0 | while IFS= read -r -d '' file; do
-            filename=$(basename "$file")
+        local universal_configs=()
+        while IFS= read -r -d '' file; do
+            universal_configs+=("$file")
+        done < <(find "$REPO_DIR/system/modprobe.d" -name "*.conf" -type f ! -name "nvidia.conf" ! -name "thinkpad_acpi.conf" -print0)
+
+        for file in "${universal_configs[@]}"; do
+            local filename=$(basename "$file")
             print_info "Copying universal configuration: $filename"
             if [[ -f "/etc/modprobe.d/$filename" ]]; then
                 print_info "Backing up existing: /etc/modprobe.d/$filename"
@@ -544,9 +895,10 @@ main() {
     echo "  4. Create necessary directories"
     echo "  5. Migrate configuration files"
     echo "  6. Install pywal integration scripts"
-    echo "  7. Copy hardware-specific system files (NVIDIA/ThinkPad configs only when detected)"
-    echo "  8. Enable system services"
-    echo "  9. Reload configurations"
+    echo "  7. Initialize pywal with wallpaper and generate color schemes"
+    echo "  8. Copy hardware-specific system files (NVIDIA/ThinkPad configs only when detected)"
+    echo "  9. Enable system services"
+    echo " 10. Reload configurations"
     echo ""
     echo "Hardware detection will automatically select appropriate packages."
     echo "You will be prompted at each major step."
@@ -583,8 +935,8 @@ main() {
     # Step 3: Install minimal AUR packages
     echo ""
     echo "Minimal AUR packages (~2 packages vs 19 full list):"
-    if [[ -f "$REPO_DIR/packages/min-aur-list.txt" ]]; then
-        cat "$REPO_DIR/packages/min-aur-list.txt" | sed 's/^/  - /'
+    if [[ -f "$REPO_DIR/packages/base-aur.txt" ]]; then
+        cat "$REPO_DIR/packages/base-aur.txt" | sed 's/^/  - /'
     fi
     echo ""
     if ask_yes_no "Install minimal AUR packages (requires paru)?"; then
@@ -615,6 +967,7 @@ main() {
     echo "  - fuzzel-pywal-update (dynamic fuzzel theming)"
     echo "  - hyprland-pywal-update (dynamic hyprland theming)"
     echo "  - mako-pywal-update (dynamic notification theming)"
+    echo "  - waybar-pywal-update (dynamic waybar theming)"
     echo "  - wallpaper (wallpaper management script)"
     echo ""
     if ask_yes_no "Install pywal integration scripts to ~/.local/bin/?"; then
@@ -622,8 +975,22 @@ main() {
     else
         print_info "Skipped pywal script installation"
     fi
-    
-    # Step 7: Copy system files
+
+    # Step 7: Initialize pywal color schemes
+    echo ""
+    echo "Pywal initialization:"
+    echo "  - Set up initial wallpaper (creates default if none found)"
+    echo "  - Generate color schemes for all components"
+    echo "  - Create waybar-colors.css for waybar theming"
+    echo "  - Initialize pywal cache directory"
+    echo ""
+    if ask_yes_no "Initialize pywal with wallpaper and generate color schemes?"; then
+        initialize_pywal
+    else
+        print_info "Skipped pywal initialization"
+    fi
+
+    # Step 8: Copy system files
     echo ""
     echo "System files to copy:"
     echo "  - nvidia.conf (NVIDIA driver settings for Wayland)"
@@ -635,8 +1002,8 @@ main() {
     else
         print_info "Skipped system file configuration"
     fi
-    
-    # Step 8: Enable services
+
+    # Step 9: Enable services
     echo ""
     echo "Services to enable:"
     echo "  - bluetooth (Bluetooth support)"
@@ -653,7 +1020,7 @@ main() {
         print_info "Skipped service configuration"
     fi
     
-    # Step 9: Reload configurations
+    # Step 10: Reload configurations
     echo ""
     if ask_yes_no "Reload Hyprland configuration (if running)?"; then
         reload_configs
