@@ -886,13 +886,14 @@ enable_services() {
         sudo systemctl enable iwd && print_success "Enabled iwd service" || print_warning "Failed to enable iwd"
     fi
 
-    # Ly display manager
-    if ! command -v ly &>/dev/null && ! pacman -Q ly &>/dev/null; then
+    # Ly display manager — runs on a TTY, needs getty disabled
+    if ! pacman -Q ly &>/dev/null; then
         print_warning "ly not installed, skipping"
-    elif systemctl is-enabled --quiet ly 2>/dev/null; then
-        print_info "ly display manager is already enabled"
+    elif systemctl is-enabled --quiet ly@tty2 2>/dev/null; then
+        print_info "ly display manager is already enabled on tty2"
     else
-        sudo systemctl enable ly && print_success "Enabled ly display manager" || print_warning "Failed to enable ly"
+        sudo systemctl enable ly@tty2 && print_success "Enabled ly@tty2" || print_warning "Failed to enable ly@tty2"
+        sudo systemctl disable getty@tty2 2>/dev/null && print_success "Disabled getty@tty2" || true
     fi
 
     # SSH daemon (openssh package)
