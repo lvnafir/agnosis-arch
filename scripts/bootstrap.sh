@@ -355,6 +355,12 @@ install_packages() {
             ;;
     esac
 
+    # Small display / DSI panel packages
+    if [[ "$FEATURES" == *"small_display"* ]] || [[ "$FEATURES" == *"dsi_panel"* ]]; then
+        package_lists+=("$REPO_DIR/packages/small-display-pacman.txt")
+        print_info "Adding small display packages (foot, zram, iio-sensor-proxy)"
+    fi
+
     # Count total packages
     for list in "${package_lists[@]}"; do
         if [[ -f "$list" ]]; then

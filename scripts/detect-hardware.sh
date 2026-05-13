@@ -187,14 +187,40 @@ detect_features() {
         features+=("thunderbolt")
     fi
 
-    # Check for touchscreen
-    if xinput list 2>/dev/null | grep -iq touch; then
+    # Check for touchscreen (works without X11)
+    if xinput list 2>/dev/null | grep -iq touch || \
+       grep -iq "touch" /proc/bus/input/devices 2>/dev/null; then
         features+=("touchscreen")
     fi
 
     # Check for fingerprint reader
     if lsusb | grep -iq fingerprint; then
         features+=("fingerprint")
+    fi
+
+    # Check for DSI display (portrait panel needing rotation)
+    if ls /sys/class/drm/*/modes 2>/dev/null | xargs grep -l "1200x1920\|1920x1200" &>/dev/null; then
+        features+=("dsi_panel")
+    fi
+    if cat /sys/class/drm/*/status 2>/dev/null | grep -q "connected" && \
+       ls /sys/class/drm/ 2>/dev/null | grep -qi "DSI"; then
+        features+=("dsi_display")
+    fi
+
+    # Check for small display (under 10 inches — check resolution + physical size)
+    local max_res=$(cat /sys/class/drm/*/modes 2>/dev/null | head -1)
+    if [[ -n "$max_res" ]]; then
+        local res_x=$(echo "$max_res" | cut -dx -f1)
+        local res_y=$(echo "$max_res" | cut -dx -f2)
+        # small high-DPI panels (like 8-inch 1920x1200) need scaling
+        if [[ "$res_x" -le 1920 && "$res_y" -le 1200 ]] || [[ "$res_x" -le 1200 && "$res_y" -le 1920 ]]; then
+            features+=("small_display")
+        fi
+    fi
+
+    # Check for accelerometer (tablet/convertible)
+    if ls /sys/bus/iio/devices/*/in_accel_* &>/dev/null; then
+        features+=("accelerometer")
     fi
 
     # Return as comma-separated string

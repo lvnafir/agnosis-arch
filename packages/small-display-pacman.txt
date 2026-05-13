@@ -1,0 +1,4 @@
+foot
+zram-generator
+wireplumber
+iio-sensor-proxy
