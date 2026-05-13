@@ -869,43 +869,48 @@ enable_services() {
     print_header "Enabling services"
 
     # Bluetooth service (bluez package)
-    if systemctl is-enabled --quiet bluetooth; then
+    if ! pacman -Q bluez &>/dev/null; then
+        print_warning "bluez not installed, skipping bluetooth"
+    elif systemctl is-enabled --quiet bluetooth 2>/dev/null; then
         print_info "Bluetooth is already enabled"
     else
-        sudo systemctl enable bluetooth
-        print_success "Enabled bluetooth service"
+        sudo systemctl enable bluetooth && print_success "Enabled bluetooth service" || print_warning "Failed to enable bluetooth"
     fi
 
     # IWD for wireless networking
-    if systemctl is-enabled --quiet iwd; then
+    if ! pacman -Q iwd &>/dev/null; then
+        print_warning "iwd not installed, skipping"
+    elif systemctl is-enabled --quiet iwd 2>/dev/null; then
         print_info "iwd is already enabled"
     else
-        sudo systemctl enable iwd
-        print_success "Enabled iwd service"
+        sudo systemctl enable iwd && print_success "Enabled iwd service" || print_warning "Failed to enable iwd"
     fi
 
     # Ly display manager
-    if systemctl is-enabled --quiet ly; then
+    if ! command -v ly &>/dev/null && ! pacman -Q ly &>/dev/null; then
+        print_warning "ly not installed, skipping"
+    elif systemctl is-enabled --quiet ly 2>/dev/null; then
         print_info "ly display manager is already enabled"
     else
-        sudo systemctl enable ly
-        print_success "Enabled ly display manager"
+        sudo systemctl enable ly && print_success "Enabled ly display manager" || print_warning "Failed to enable ly"
     fi
 
     # SSH daemon (openssh package)
-    if systemctl is-enabled --quiet sshd; then
+    if ! pacman -Q openssh &>/dev/null; then
+        print_warning "openssh not installed, skipping sshd"
+    elif systemctl is-enabled --quiet sshd 2>/dev/null; then
         print_info "SSH daemon is already enabled"
     else
-        sudo systemctl enable sshd
-        print_success "Enabled SSH daemon"
+        sudo systemctl enable sshd && print_success "Enabled SSH daemon" || print_warning "Failed to enable sshd"
     fi
 
     # Reflector timer for mirrorlist updates
-    if systemctl is-enabled --quiet reflector.timer; then
+    if ! pacman -Q reflector &>/dev/null; then
+        print_warning "reflector not installed, skipping timer"
+    elif systemctl is-enabled --quiet reflector.timer 2>/dev/null; then
         print_info "Reflector timer is already enabled"
     else
-        sudo systemctl enable reflector.timer
-        print_success "Enabled reflector timer for mirrorlist updates"
+        sudo systemctl enable reflector.timer && print_success "Enabled reflector timer" || print_warning "Failed to enable reflector timer"
     fi
 
 
