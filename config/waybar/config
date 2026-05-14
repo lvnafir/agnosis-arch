@@ -165,22 +165,23 @@
     "cava": {
         "framerate": 60,
         "autosens": 1,
-        "sensitivity": 4,
+        "sensitivity": 100,
         "bars": 16,
         "method": "pipewire",
         "input_delay": 1,
         "mono": true,
         "stereo": false,
         "monstercat": true,
-        "waves": true,
         "format-icons": [
+            " ",
             "▁",
             "▂",
             "▃",
             "▄",
             "▅",
             "▆",
-            "▇"
+            "▇",
+            "█"
         ],
         "tooltip": false
     }
