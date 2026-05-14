@@ -224,7 +224,6 @@ done <<< "$NETWORKS"
 # Network module is in modules-right: backlight, pulseaudio, easyeffects, network, wifi-test, battery, clock
 # Estimate: each module ~60px wide, network is 3rd from right
 # So roughly: clock(60) + battery(60) + network(60) = 180px from right edge
-SCREEN_WIDTH=$(hyprctl monitors | grep -A 10 "eDP-1" | grep -o "[0-9]*x[0-9]*" | cut -d'x' -f1)
 MENU_WIDTH=320  # Width of our menu in pixels (35 chars * ~9px per char)
 NETWORK_MODULE_OFFSET=180  # Estimated distance from right edge
 X_MARGIN=$((NETWORK_MODULE_OFFSET - MENU_WIDTH / 2))
