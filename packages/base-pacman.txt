@@ -24,7 +24,7 @@ hyprpicker
 hyprshot
 grim
 slurp
-swww
+awww
 xdg-desktop-portal-hyprland
 chromium
 ttf-cascadia-code-nerd

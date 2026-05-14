@@ -203,18 +203,18 @@ echo -e "${BLUE}Wallpaper:${NC} $WALLPAPER"
 echo -e "${BLUE}Transition:${NC} $TRANSITION_TYPE ($TRANSITION_DURATION seconds)"
 echo -e "${BLUE}Pywal Backend:${NC} $PYWAL_BACKEND"
 
-# Step 1: Set wallpaper with swww
-echo -e "\n${YELLOW}Step 1: Setting wallpaper with swww...${NC}"
+# Step 1: Set wallpaper with awww
+echo -e "\n${YELLOW}Step 1: Setting wallpaper with awww...${NC}"
 
-# Initialize swww if not running
-if ! pgrep -x swww-daemon >/dev/null; then
-    echo -e "${CYAN}Starting swww daemon...${NC}"
-    swww-daemon &
+# Initialize awww if not running
+if ! pgrep -x awww-daemon >/dev/null; then
+    echo -e "${CYAN}Starting awww daemon...${NC}"
+    awww-daemon &
     sleep 2
 fi
 
 # Set the wallpaper
-swww img "$WALLPAPER" \
+awww img "$WALLPAPER" \
     --transition-type "$TRANSITION_TYPE" \
     --transition-duration "$TRANSITION_DURATION" \
     --transition-fps 60

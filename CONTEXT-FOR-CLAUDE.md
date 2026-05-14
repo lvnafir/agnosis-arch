@@ -46,8 +46,8 @@ The agnosis-arch bootstrap script has been successfully executed on a T420s syst
 - Hyprland is installed and launches
 - Waybar is installed but doesn't start automatically
 - Waybar can be launched manually
-- swww (wallpaper daemon) doesn't launch either
-- swww can presumably be launched manually as well
+- awww (wallpaper daemon) doesn't launch either
+- awww can presumably be launched manually as well
 
 ## Key Files to Examine
 1. **Hyprland Configuration**: Look for `hyprland.conf` or similar in:
@@ -72,12 +72,12 @@ The agnosis-arch bootstrap script has been successfully executed on a T420s syst
 - **Expected Configs**: Should include Hyprland, waybar, kitty, etc.
 
 ## Things to Check
-1. **Hyprland Autostart**: Does hyprland.conf have `exec-once = waybar` and `exec-once = swww` or similar?
+1. **Hyprland Autostart**: Does hyprland.conf have `exec-once = waybar` and `exec-once = awww` or similar?
 2. **Config Copying**: Were configs properly copied during bootstrap?
 3. **File Permissions**: Are copied configs readable/executable?
-4. **Dependencies**: Are all waybar and swww dependencies installed?
+4. **Dependencies**: Are all waybar and awww dependencies installed?
 5. **Service Files**: Any systemd user services needed?
-6. **swww Configuration**: Proper wallpaper daemon setup and initialization
+6. **awww Configuration**: Proper wallpaper daemon setup and initialization
 
 ## Repository Structure
 ```
@@ -109,7 +109,6 @@ agnosis-arch/
 - Fresh Arch installation on T420s
 - Manual Arch base system completed
 - agnosis-arch bootstrap script executed successfully
-- User can provide SSH access if needed (password: REDACTED)
 
 ## Success Criteria
-After fixes, both waybar and swww should automatically launch when Hyprland starts, providing the full desktop environment with working status bar and wallpaper daemon as intended.
+After fixes, both waybar and awww should automatically launch when Hyprland starts, providing the full desktop environment with working status bar and wallpaper daemon as intended.

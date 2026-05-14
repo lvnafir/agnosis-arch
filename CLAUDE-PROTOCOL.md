@@ -77,7 +77,7 @@ dmidecode -s system-manufacturer 2>/dev/null || echo "unknown"
 - **Application Launcher**: fuzzel (lightweight and fast)
 - **Notifications**: mako (Wayland-native)
 - **Screen Locker**: hyprlock (Wayland-compatible)
-- **Wallpaper Manager**: swww (efficient Wayland wallpaper daemon)
+- **Wallpaper Manager**: awww (Wayland wallpaper daemon — swww fork that replaced it in Arch repos)
 - **Theme**: Catppuccin Mocha (system-wide, pywal integration)
 
 ### Adaptive System Components
@@ -157,7 +157,7 @@ nvidia-dkms nvidia-utils nvidia-settings OR mesa vulkan-radeon OR mesa vulkan-in
 **Hyprland Desktop Stack**:
 ```
 hyprland waybar fuzzel mako hyprlock
-swww xdg-desktop-portal-hyprland
+awww xdg-desktop-portal-hyprland
 xorg-xwayland pipewire pipewire-pulse wireplumber
 ```
 
